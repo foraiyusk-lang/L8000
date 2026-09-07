@@ -1,0 +1,214 @@
+// 残り8000回 - スタッフロール
+// 上から下へ「表示順」で書く。プレイヤーは一番下(Thank you for playing)から一番上(タイトル)へ登る。
+// マークアップ:  # 見出し / = タイトル / ~ 自由行 ~ / [gap N] 空白Nセル / 役割 :: 名前 / 名前のみ
+
+= 残り8000回
+
+[gap 2]
+
+# Directed by
+~ ??? ~
+
+[gap 2.5]
+
+# Game Design
+Lead Game Designer :: tsubaki
+System Designer :: R. Aihara
+Level Designer :: M. Fukuda
+Level Designer :: 北村 悠
+Combat Designer :: K. Osako
+Encounter Designer :: J. Winter
+Systems Designer :: E. Petrov
+Narrative Designer :: 佐々木 玲
+
+[gap 2]
+
+# Programming
+Lead Programmer :: A. Sato
+Gameplay Programmer :: H. Mori
+Gameplay Programmer :: 中村 唯
+Physics Programmer :: D. Bianchi
+Engine Programmer :: S. Novak
+Graphics Programmer :: L. Zhang
+Rendering Engineer :: M. Halvorsen
+Tools Programmer :: P. Andersen
+UI Programmer :: Y. Okada
+Network Programmer :: T. Brandt
+Audio Programmer :: C. Rossi
+AI Programmer :: 林 大地
+Build Engineer :: G. Marek
+Release Engineer :: N. Farooq
+
+[gap 2]
+
+# Art
+Art Director :: 石田 亜衣
+Concept Artist :: F. Meyer
+Concept Artist :: R. Delgado
+Character Artist :: O. Kowalski
+Environment Artist :: 上原 諒
+Environment Artist :: T. Nilsson
+Technical Artist :: V. Ivanova
+Lighting Artist :: B. Lundqvist
+UI Artist :: H. Tanaka
+UI / UX Designer :: K. Abe
+
+[gap 2]
+
+# Animation
+Lead Animator :: J. Park
+Animator :: S. Yamada
+Animator :: A. Costa
+Animator :: 森本 千夏
+Rigging Artist :: D. Hoffmann
+
+[gap 2]
+
+# Visual Effects
+VFX Lead :: M. Rautio
+VFX Artist :: 大和田 蓮
+VFX Artist :: I. Sokolov
+
+[gap 2]
+
+# Audio
+Music :: 椿 ちひろ
+Music :: 遠野 灯
+Additional Music :: L. Fontaine
+Sound Director :: 早坂 迅
+Sound Designer :: R. Baumann
+Sound Designer :: 蜷川 澪
+Dialogue Editor :: A. Meunier
+Audio Mix :: T. Eriksson
+
+[gap 2]
+
+# Narrative
+Lead Writer :: 諏訪 悠
+Writer :: E. Hallberg
+Writer :: N. Duval
+Script Editor :: 謎 ノ 井
+Localization Writer :: C. Marino
+
+[gap 2]
+
+# Quality Assurance
+QA Lead :: 田畑 佳
+QA Lead :: R. Osei
+QA Tester :: A. Berg
+QA Tester :: B. Choi
+QA Tester :: C. Nakamura
+QA Tester :: D. Ferreira
+QA Tester :: E. Kaufmann
+QA Tester :: F. Lindgren
+QA Tester :: G. Iwata
+QA Tester :: H. Moretti
+QA Tester :: I. Sato
+QA Tester :: J. Weber
+QA Tester :: K. Andersen
+QA Tester :: L. Romano
+QA Tester :: M. Fujii
+QA Tester :: N. Hansen
+QA Tester :: O. Bianchi
+QA Tester :: P. Suzuki
+QA Tester :: Q. Vasquez
+QA Tester :: R. Takeda
+Compliance QA :: S. Novak
+Certification :: T. Blomqvist
+
+[gap 2]
+
+# Localization
+Localization Director :: 逢坂 澪
+English :: Rifle Bird Studio
+Japanese :: 有限会社 かたつむり
+French :: Studio Palindrome
+German :: Wortспiel GmbH
+Spanish :: Casa Eco
+Italian :: Bottega Ritorno
+Korean :: 되감기 스튜디오
+Simplified Chinese :: 回声本地化
+Brazilian Portuguese :: Fim Estudio
+LQA :: 全言語チーム
+
+[gap 2]
+
+# Voice Cast
+??? :: 藤原 佳奈
+The Editor :: M. Sundqvist
+The Producer :: 土橋 徹
+A Voice from Below :: L. Petrova
+The Last Line :: 名も無き声
+Additional Voices :: The Whole Cast
+
+[gap 2]
+
+# External Partners
+Co-Development :: Halfstep Interactive
+Additional Programming :: Northlight Contractors
+Additional Art :: 工房 ひび
+Motion Capture :: Anchor Mocap Stage
+Cinematics :: Paper Lantern Pictures
+Voice Recording :: 残響スタジオ
+
+[gap 2]
+
+# Publishing
+Executive Producer :: R. Whitlock
+Producer :: tsubaki
+Associate Producer :: 三國 佐和
+Production Manager :: K. Nyman
+Brand Manager :: A. Delacroix
+Marketing :: The Signal Team
+Community :: 深夜 の 配信
+PR :: Open Channel
+Player Support :: Everyone Who Wrote In
+Legal :: Ledger & Vane
+Business Affairs :: H. Okabe
+
+[gap 2]
+
+# Studio Operations
+Studio Head :: 黒木 環
+Operations :: A. Lindholm
+IT :: The People Who Kept It Running
+Finance :: M. Conti
+People & Culture :: 家族 みんな
+
+[gap 2]
+
+# Middleware & Technology
+Made with Unity
+Font :: x12y16pxMaruMonica (hicc)
+~ and many open source libraries ~
+
+[gap 2]
+
+# Special Thanks
+会場で 足を止めてくれた あなた
+ここまで 一緒に来た 全員
+眠らなかった 夜
+Tokyo Game Show
+そして、このエンディングを 最後まで 登りきる人へ
+
+[gap 2.5]
+
+# Legal
+~ 「残り8000回」は 架空のゲームです ~
+All names and studios in this staff roll are fictitious.
+Any resemblance to real credits is part of the joke.
+No credits were harmed in the making of this ending.
+~ ...まだ、ここまでは。 ~
+
+[gap 2]
+
+# Published by
+Null Interactive
+
+[gap 2]
+
+~ © 2026 tsubaki / Null Interactive ~
+
+[gap 1]
+
+Thank you for playing.

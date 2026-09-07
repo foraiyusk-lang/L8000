@@ -1,0 +1,40 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vsconfig
+.idea/
+*.csproj
+*.sln
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.suo
+*.tmp
+*.unityproj
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Crash reports
+sysinfo.txt
+crashlog*.txt
+
+# Claude worktrees (isolated copies)
+.claude/worktrees/
+
+# Claude test screenshots
+Screenshots/
