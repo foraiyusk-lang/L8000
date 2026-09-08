@@ -94,12 +94,20 @@ namespace L8000
             }
 
             float halfH = _cam.orthographicSize;
+
+            // プレイヤーが遅れているときは自動スクロールも頭打ちにする。
+            // (_scrollY だけ先に走ると、追いついた瞬間にカメラがワープする)
+            if (target != null)
+            {
+                float scrollCap = target.position.y + halfH - keepPlayerAbove;
+                if (_scrollY > scrollCap) _scrollY = scrollCap;
+            }
+
             float desired = _scrollY;
             if (target != null)
             {
                 float followY = target.position.y - followAheadOffset;
                 if (followY > desired) desired = followY;
-                // 取り残され防止: プレイヤーが画面下端に近づいたらカメラを引き戻す
                 float minToKeepPlayer = target.position.y + halfH - keepPlayerAbove;
                 if (desired > minToKeepPlayer) desired = minToKeepPlayer;
             }

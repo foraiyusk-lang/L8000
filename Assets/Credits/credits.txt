@@ -123,7 +123,7 @@ Localization Director :: 逢坂 澪
 English :: Rifle Bird Studio
 Japanese :: 有限会社 かたつむり
 French :: Studio Palindrome
-German :: Wortспiel GmbH
+German :: Wortspiel GmbH
 Spanish :: Casa Eco
 Italian :: Bottega Ritorno
 Korean :: 巻き戻し スタジオ

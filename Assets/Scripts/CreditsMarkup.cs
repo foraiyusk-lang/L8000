@@ -147,7 +147,11 @@ namespace L8000
                     float advance = layout.lineStepY + pending;
                     if (spec.Kind == LineKind.Header) advance += layout.headerPad;
                     if (spec.Kind == LineKind.Title) advance += layout.headerPad;
-                    advance = Mathf.Clamp(advance, layout.minLineGap, Mathf.Max(layout.minLineGap, layout.maxLineGap));
+                    // 区切り(空行/[gap])があるところだけ少し大きく許す。無ければ通常の行間。
+                    float ceiling = pending > 0.001f
+                        ? Mathf.Max(layout.maxLineGap, layout.maxSectionGap)
+                        : layout.maxLineGap;
+                    advance = Mathf.Clamp(advance, layout.minLineGap, Mathf.Max(layout.minLineGap, ceiling));
                     y += advance;
                 }
                 pending = 0f;

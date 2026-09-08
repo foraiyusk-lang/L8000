@@ -345,6 +345,7 @@ namespace L8000.EditorTools
             if (layout.charColliderWidthRatio <= 0f) { layout.charColliderWidthRatio = 1f; fixedAny = true; }
             if (layout.maxLineGap <= 0f) { layout.maxLineGap = 2.6f; fixedAny = true; }
             if (layout.minLineGap <= 0f) { layout.minLineGap = 1.3f; fixedAny = true; }
+            if (layout.maxSectionGap <= 0f) { layout.maxSectionGap = 2.2f; fixedAny = true; }
             if (layout.gapUnit <= 0f) { layout.gapUnit = 0.6f; fixedAny = true; }
             if (layout.cellHeight <= 0f) { layout.cellHeight = 1f; fixedAny = true; }
             if (layout.colliderHeightRatio <= 0f) { layout.colliderHeightRatio = 0.9f; fixedAny = true; }

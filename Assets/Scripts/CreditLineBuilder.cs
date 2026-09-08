@@ -282,10 +282,8 @@ namespace L8000
             tmp.overflowMode = TextOverflowModes.Overflow;
             tmp.fontSize = RefSize;
 
-            bool cjk = GameLayout.ContainsCJK(s);
             float targetH = _layout.cellHeight * scale;
-            seg.mspaceEm = _layout.CellWidth(cjk) / _layout.cellHeight;
-            tmp.text = $"<mspace={seg.mspaceEm:0.####}em>{s}";
+            tmp.text = ComposeMspace(s.ToCharArray());
 
             var rt = tmp.rectTransform;
             rt.pivot = new Vector2(0f, 0.5f);
@@ -349,11 +347,35 @@ namespace L8000
             for (int i = 0; i < chars.Length; i++)
                 if (seg.destroyed[i]) chars[i] = ' ';
 
-            seg.tmp.text = $"<mspace={seg.mspaceEm:0.####}em>{new string(chars)}";
+            seg.tmp.text = ComposeMspace(chars);
             var rt = seg.tmp.rectTransform;
             rt.localScale = Vector3.one * seg.k;
             rt.localPosition = new Vector3(seg.originX, 0f, 0f);
             seg.tmp.ForceMeshUpdate();
+        }
+
+        /// <summary>
+        /// 文字ごとに送り幅を切り替えた rich text を作る。
+        /// 欧文(半角)は halfCellWidth、CJK/全角は fullCellWidth。
+        /// → 「残り8000回」の数字が間延びしない。
+        /// </summary>
+        string ComposeMspace(char[] chars)
+        {
+            float halfEm = _layout.CellWidth(false) / _layout.cellHeight;
+            float fullEm = _layout.CellWidth(true) / _layout.cellHeight;
+            var sb = new StringBuilder(chars.Length + 24);
+            int lastWide = -1;
+            foreach (char c in chars)
+            {
+                int wide = GameLayout.IsWide(c) ? 1 : 0;
+                if (wide != lastWide)
+                {
+                    sb.Append("<mspace=").Append((wide == 1 ? fullEm : halfEm).ToString("0.####")).Append("em>");
+                    lastWide = wide;
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
         }
 
         /// <summary>行1本のソリッドバーを組む。破壊された文字の X 範囲だけ穴。</summary>
