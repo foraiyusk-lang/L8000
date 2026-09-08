@@ -25,12 +25,22 @@ namespace L8000
         {
             Instance = this;
 
-            // タイトルの設定を反映
-            bgmVolume = PlayerPrefs.GetFloat("l8000_bgm", 0.7f) * 0.5f;
-            sfxVolume = PlayerPrefs.GetFloat("l8000_sfx", 0.8f) * 0.7f;
+            // AudioListener が無いと一切鳴らない。保険で用意する。
+            if (FindFirstObjectByType<AudioListener>() == null)
+            {
+                var camObj = Camera.main != null ? Camera.main.gameObject : gameObject;
+                camObj.AddComponent<AudioListener>();
+            }
+
+            // タイトルの設定を反映(掛け率は「主張しすぎない」範囲で聞こえる音量に)
+            bgmVolume = PlayerPrefs.GetFloat("l8000_bgm", 0.7f) * 0.85f;
+            sfxVolume = PlayerPrefs.GetFloat("l8000_sfx", 0.8f) * 0.85f;
 
             _bgmFwd = Load("bgm") ?? ProcBgm();
             _bgmRev = Load("bgm_rev") ?? _bgmFwd;
+            // DecompressOnLoad + preload なので通常は即再生可。念のため明示ロード。
+            if (_bgmFwd != null && _bgmFwd.loadState != AudioDataLoadState.Loaded) _bgmFwd.LoadAudioData();
+            if (_bgmRev != null && _bgmRev.loadState != AudioDataLoadState.Loaded) _bgmRev.LoadAudioData();
 
             _bgm = gameObject.AddComponent<AudioSource>();
             _bgm.loop = true;

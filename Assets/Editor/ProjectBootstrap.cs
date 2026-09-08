@@ -539,6 +539,7 @@ namespace L8000.EditorTools
             cam.farClipPlane = 50f;
             cam.allowMSAA = false;
             camGo.transform.position = new Vector3(0f, 0f, -10f);
+            camGo.AddComponent<AudioListener>();   // これが無いと BGM/SE が一切鳴らない
 
             // --- Roll ----------------------------------------------------
             var rollGo = new GameObject("CreditsRoll");
