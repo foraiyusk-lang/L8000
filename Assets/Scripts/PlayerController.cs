@@ -19,18 +19,21 @@ namespace L8000
         public float groundDecel = 55f;
 
         [Header("ジャンプ")]
-        [Tooltip("到達高 ≈ jumpForce^2 / (2 * 9.81 * gravityScale)。maxLineGap の約1.6倍が目安(易しめ)。")]
-        public float jumpForce = 13.5f;
-        [Tooltip("空中ジャンプ(2段目)の強さ倍率。")]
-        public float airJumpMult = 0.92f;
-        [Tooltip("地上を含めた最大ジャンプ回数。2 = 2段ジャンプ。")]
+        [Tooltip("到達高 ≈ jumpForce^2 / (2*9.81*gravityScale)。" +
+                 "最大の段差(maxSectionGap 2.0)+余裕 を越えつつ、無駄に高くない値。apex≈2.9。")]
+        public float jumpForce = 13.0f;
+        [Tooltip("空中ジャンプ(2段目)の強さ倍率。ミスした時の保険。")]
+        public float airJumpMult = 0.95f;
+        [Tooltip("地上を含めた最大ジャンプ回数。2 = 2段ジャンプ(初心者の保険)。")]
         public int maxJumps = 2;
         public float gravityScale = 3.0f;
-        public float fallGravityMult = 1.45f;
-        [Tooltip("ジャンプ中にキーを離すと落下を早める倍率。1で無効(タップでもフル高さ)。")]
+        public float fallGravityMult = 1.4f;
+        [Tooltip("ジャンプ中にキーを離すと落下を早める倍率。1で無効(タップでもフル高さ = 初心者向け)。")]
         public float lowJumpMult = 1.0f;
         public float maxFallSpeed = 18f;
-        public float coyoteTime = 0.15f;
+        [Tooltip("足場を踏み外しても少しの間ジャンプできる猶予。長いほど親切。")]
+        public float coyoteTime = 0.16f;
+        [Tooltip("着地直前にジャンプを押しても拾う猶予。長いほど親切。")]
         public float jumpBuffer = 0.18f;
 
         [Header("接地判定")]

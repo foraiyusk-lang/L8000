@@ -21,7 +21,7 @@ MonoBehaviour:
   gapUnit: 0.5
   maxLineGap: 1.85
   minLineGap: 1.5
-  maxSectionGap: 2.2
+  maxSectionGap: 2
   centerGap: 0.45
   nameColor: {r: 1, g: 1, b: 1, a: 1}
   roleColor: {r: 0.72, g: 0.78, b: 0.9, a: 1}

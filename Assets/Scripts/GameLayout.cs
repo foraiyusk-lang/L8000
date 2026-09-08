@@ -47,8 +47,8 @@ namespace L8000
         public float minLineGap = 1.5f;
 
         [Tooltip("[gap] や空行があるセクション区切りで許す最大の縦間隔(world units)。" +
-                 "ジャンプ到達高より必ず小さく。区切りにリズムを出すため maxLineGap より少し大きめ。")]
-        public float maxSectionGap = 2.2f;
+                 "ジャンプ到達高(apex≈2.9)より必ず小さく、初心者でも越えられる 2.0。")]
+        public float maxSectionGap = 2.0f;
 
         [Header("役割 :: 名前 の2カラム")]
         [Tooltip("中央線から役割/名前をどれだけ離すか(world units)。役割と名前の間の隙間になる。")]
