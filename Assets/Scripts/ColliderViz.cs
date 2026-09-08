@@ -16,12 +16,16 @@ namespace L8000
         Sprite _sprite;
         readonly List<SpriteRenderer> _pool = new List<SpriteRenderer>();
         Transform _root;
+        BoxCollider2D[] _cols;
+        float _rescan;
+        Camera _cam;
 
         void Awake()
         {
             _sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
             _root = new GameObject("ColliderViz_Pool").transform;
             _root.SetParent(transform, false);
+            _cam = Camera.main;
         }
 
         void Update()
@@ -35,11 +39,23 @@ namespace L8000
                 return;
             }
 
-            int i = 0;
-            foreach (var col in FindObjectsByType<BoxCollider2D>(FindObjectsSortMode.None))
+            // コライダ一覧は毎フレームではなく時々だけ取り直す(タイルが多いので)
+            _rescan -= Time.unscaledDeltaTime;
+            if (_cols == null || _rescan <= 0f)
             {
-                if (!col.enabled || !col.gameObject.activeInHierarchy) continue;
+                _cols = FindObjectsByType<BoxCollider2D>(FindObjectsSortMode.None);
+                _rescan = 0.5f;
+            }
+            if (_cam == null) _cam = Camera.main;
+            float camY = _cam != null ? _cam.transform.position.y : 0f;
+            float span = _cam != null ? _cam.orthographicSize + 3f : 12f;
+
+            int i = 0;
+            foreach (var col in _cols)
+            {
+                if (col == null || !col.enabled || !col.gameObject.activeInHierarchy) continue;
                 var b = col.bounds;
+                if (Mathf.Abs(b.center.y - camY) > span) continue;   // 画面外は描かない
                 var sr = Get(i++);
                 sr.transform.position = new Vector3(b.center.x, b.center.y, -3f);
                 sr.transform.localScale = new Vector3(Mathf.Max(0.02f, b.size.x), Mathf.Max(0.02f, b.size.y), 1f);
