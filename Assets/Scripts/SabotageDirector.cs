@@ -34,8 +34,8 @@ namespace L8000
             }
         }
 
-        void OnEnable() => CreditLineBuilder.OnCharsDestroyed += OnDestroyed;
-        void OnDisable() => CreditLineBuilder.OnCharsDestroyed -= OnDestroyed;
+        void OnEnable() => TileField.OnTileDestroyed += OnTileDestroyed;
+        void OnDisable() => TileField.OnTileDestroyed -= OnTileDestroyed;
 
         void Update()
         {
@@ -47,17 +47,21 @@ namespace L8000
             }
         }
 
-        void OnDestroyed(CreditLineBuilder line, string chars)
+        void OnTileDestroyed(CreditTile tile, string chars)
         {
-            if (line == null || line.Spec == null || line.IsGate) return;   // ゲートは機能破壊しない
-            string role = (line.Spec.Left ?? "").Trim();
+            if (tile == null) return;
+            // タイルの元になった行(役割名)で判定。役割部分だけ見る(":: 名前" の前)。
+            string src = tile.sourceLine ?? "";
+            int sep = src.IndexOf("::");
+            string role = (sep >= 0 ? src.Substring(0, sep) : src).Trim();
             string r = role.ToLowerInvariant();
+            if (string.IsNullOrEmpty(r)) return;
 
             if (r.Contains("music") || r.Contains("composer")) Fire("bgm", "BGM", () => AudioManager.Instance?.StopBgm());
             if (r.Contains("sound director")) Fire("sfx", "効果音", () => AudioManager.Instance?.KillSfx());
             if (r.Contains("physics programmer")) Fire("physics", "物理", () => PlayerController.PhysicsAnomaly = true);
             if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", "描画", ShowNoise);
-            if (r.Contains("localization")) Fire("garble", "翻訳", () => CreditLineBuilder.Garble = true);
+            if (r.Contains("localization")) Fire("garble", "翻訳", () => { TileField.Garble = true; TileField.Instance?.RefreshAll(); });
             if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", "UI", () => hud?.Kill());
             if (r.Contains("lighting")) Fire("light", "照明", () => ScreenFx.Vignette(0.4f, 2f));
             if (r.Contains("cinematics") || r.Contains("camera")) Fire("frame", "画面の水平", () => CameraFollow.FrameBroken = true);

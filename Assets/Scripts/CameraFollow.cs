@@ -11,7 +11,7 @@ namespace L8000
     public class CameraFollow : MonoBehaviour
     {
         public Transform target;
-        public RollStreamer roll;
+        public TileField roll;
 
         [Tooltip(">0 なら Awake で camera.orthographicSize をこの値にする。")]
         public float orthoSize = 10f;

@@ -14,7 +14,7 @@ namespace L8000
     {
         public Transform player;
         public Camera viewCamera;
-        public RollStreamer streamer;
+        public TileField streamer;
 
         [Tooltip("発動時、プレイヤーからどれだけ離れて現れるか(world)。")]
         public float startGap = 10f;
@@ -54,7 +54,7 @@ namespace L8000
         void Awake()
         {
             if (viewCamera == null) viewCamera = Camera.main;
-            if (streamer == null) streamer = FindFirstObjectByType<RollStreamer>();
+            if (streamer == null) streamer = FindFirstObjectByType<TileField>();
             if (player != null) _prb = player.GetComponent<Rigidbody2D>();
             int g = LayerMask.NameToLayer("Ground");
             _groundMask = g >= 0 ? (1 << g) : Physics2D.AllLayers;

@@ -62,7 +62,7 @@ namespace L8000
             _down = down;
             _rb.linearVelocity = velocity;
             _live = true;
-            _lastLine = null;
+            _lastTile = null;
         }
 
         void Update()
@@ -70,17 +70,17 @@ namespace L8000
             if (_live && Mathf.Abs(transform.position.y - _startY) > _maxRange) Despawn();
         }
 
-        CreditLineBuilder _lastLine;
+        CreditTile _lastTile;
 
         void OnTriggerEnter2D(Collider2D other)
         {
             if (!_live) return;
-            var line = other.GetComponentInParent<CreditLineBuilder>();
-            if (line == null || line == _lastLine) return;
-            _lastLine = line;
-            if (_down) line.BreakOpen();      // 下向き: 行の当たり判定を全消し(===== 突破)
-            else line.HitAt(transform.position);
-            Despawn();   // 1発 = 1行だけ。貫通しない
+            var tile = other.GetComponentInParent<CreditTile>();
+            if (tile == null || tile == _lastTile) return;
+            _lastTile = tile;
+            if (_down) tile.BreakOpen();      // 下向き: 撃ち抜く(===== 突破)
+            else tile.HitTest(transform.position);
+            Despawn();   // 1発 = 1タイルだけ。貫通しない
         }
 
         void Despawn()

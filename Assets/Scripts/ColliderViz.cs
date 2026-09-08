@@ -45,8 +45,8 @@ namespace L8000
                 sr.transform.localScale = new Vector3(Mathf.Max(0.02f, b.size.x), Mathf.Max(0.02f, b.size.y), 1f);
 
                 var pc = col.GetComponent<PlayerController>();
-                var line = col.GetComponent<CreditLineBuilder>();
-                bool rule = line != null && line.Spec != null && line.Spec.Kind == LineKind.Rule;
+                var tile = col.GetComponentInParent<CreditTile>();
+                bool rule = tile != null && tile.isRule;
                 sr.color = pc != null ? new Color(0.3f, 0.8f, 1f, 0.5f)
                          : rule ? new Color(1f, 0.75f, 0.25f, 0.4f)
                          : new Color(1f, 0.3f, 0.3f, 0.34f);

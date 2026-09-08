@@ -16,7 +16,7 @@ namespace L8000
         public TextMeshPro worldText;   // world 空間。プレイヤーの脇をせり上がる。
         public Transform player;
         public Camera viewCamera;
-        public RollStreamer streamer;
+        public TileField streamer;
         public Hud hud;
 
         public float fadeDuration = 1.4f;
@@ -85,7 +85,7 @@ namespace L8000
             if (worldText != null)
             {
                 worldText.gameObject.SetActive(true);
-                string branch = EndSequence_FinalLine(badEnd, CreditLineBuilder.TotalCharsDestroyed);
+                string branch = EndSequence_FinalLine(badEnd, TileField.TotalCharsDestroyed);
                 worldText.text = $"PLAYED BY\n\n{PlayerName.Display}\n\n\n<size=55%>{branch}</size>";
                 worldText.ForceMeshUpdate();
 
@@ -111,9 +111,9 @@ namespace L8000
 
         static void CleanStatics()
         {
-            CreditLineBuilder.TotalCharsDestroyed = 0;
-            CreditLineBuilder.Garble = false;
-            CreditLineBuilder.DescentDropDestroyed = false;
+            TileField.TotalCharsDestroyed = 0;
+            TileField.Garble = false;
+            TileField.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
             CameraFollow.FrameBroken = false;
             WritingBroken = false;

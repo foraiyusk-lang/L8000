@@ -34,9 +34,9 @@ namespace L8000
             Depleted = Remaining == 0;
 
             // ドメインリロードを切っている検証時に前回の static が残らないよう明示リセット
-            CreditLineBuilder.TotalCharsDestroyed = 0;
-            CreditLineBuilder.Garble = false;
-            CreditLineBuilder.DescentDropDestroyed = false;
+            TileField.TotalCharsDestroyed = 0;
+            TileField.Garble = false;
+            TileField.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
             Finale.WritingBroken = false;
             CameraFollow.FrameBroken = false;

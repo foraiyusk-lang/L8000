@@ -18,7 +18,7 @@ namespace L8000
         public Weapon weapon;
         public CameraFollow cameraFollow;
         public Camera viewCamera;
-        public RollStreamer streamer;
+        public TileField streamer;   // 旧 RollStreamer の後継
         public VoidRiser voidRiser;
         public Finale finale;
         public UnityEngine.UI.Image dim;  // 巻き戻し中に背景を暗く(Clock の子・HUD Canvas 上)
@@ -76,12 +76,12 @@ namespace L8000
         void OnEnable()
         {
             VoidRiser.OnFinalSwallow += OnFinalSwallow;
-            CreditLineBuilder.OnBottomBroken += OnBottomBroken;
+            TileField.OnBottomBroken += OnBottomBroken;
         }
         void OnDisable()
         {
             VoidRiser.OnFinalSwallow -= OnFinalSwallow;
-            CreditLineBuilder.OnBottomBroken -= OnBottomBroken;
+            TileField.OnBottomBroken -= OnBottomBroken;
         }
 
         void OnFinalSwallow()
@@ -182,7 +182,7 @@ namespace L8000
             _phase = Phase.Descent;
             if (cameraFollow != null) cameraFollow.enabled = false;
 
-            CreditLineBuilder.DescentDropDestroyed = true;
+            TileField.DescentDropDestroyed = true;
             streamer.RefreshAll();   // 斜線(取り消し線)の行は当たり判定を落とす
 
             if (_prb != null) { _prb.bodyType = RigidbodyType2D.Dynamic; _prb.linearVelocity = Vector2.zero; }

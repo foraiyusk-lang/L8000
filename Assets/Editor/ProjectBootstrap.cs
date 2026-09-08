@@ -122,9 +122,8 @@ namespace L8000.EditorTools
             if (_capStage == 0)
             {
                 _capPhaseFrame++;
-                var streamer0 = UnityEngine.Object.FindFirstObjectByType<RollStreamer>();
-                var roll0 = streamer0 != null ? streamer0.Roll : null;
-                float topY = roll0 != null ? roll0.TopY : 0f;
+                var streamer0 = UnityEngine.Object.FindFirstObjectByType<TileField>();
+                float topY = streamer0 != null ? streamer0.TopY : 0f;
                 var rb0 = pc != null ? pc.GetComponent<Rigidbody2D>() : null;
                 double t = EditorApplication.timeSinceStartup - _capStartTime;
 
@@ -278,16 +277,15 @@ namespace L8000.EditorTools
 
         static void DumpDiagnostics()
         {
-            var streamer = UnityEngine.Object.FindFirstObjectByType<RollStreamer>();
+            var streamer = UnityEngine.Object.FindFirstObjectByType<TileField>();
             var player = UnityEngine.Object.FindFirstObjectByType<PlayerController>();
-            int liveLines = UnityEngine.Object.FindObjectsByType<CreditLineBuilder>(FindObjectsSortMode.None)
-                .Count(b => b.Active);
+            int liveLines = UnityEngine.Object.FindObjectsByType<CreditTile>(FindObjectsSortMode.None).Length;
             int liveBoxes = UnityEngine.Object.FindObjectsByType<BoxCollider2D>(FindObjectsSortMode.None).Length;
             var sb = new System.Text.StringBuilder();
             sb.AppendLine("--- L8000 diagnostics ---");
             if (streamer != null)
-                sb.AppendLine($"roll lines={streamer.Roll?.Lines.Count} bottomY={streamer.BottomY:0.0} topY={streamer.TopY:0.0}");
-            sb.AppendLine($"live credit lines={liveLines}  total BoxCollider2D={liveBoxes}");
+                sb.AppendLine($"bottomY={streamer.BottomY:0.0} topY={streamer.TopY:0.0}");
+            sb.AppendLine($"tiles={liveLines}  total BoxCollider2D={liveBoxes}");
             if (player != null)
                 sb.AppendLine($"player pos={player.transform.position} grounded={player.IsGrounded}");
             Debug.Log("[Bootstrap] " + sb);
@@ -541,14 +539,11 @@ namespace L8000.EditorTools
             camGo.transform.position = new Vector3(0f, 0f, -10f);
             camGo.AddComponent<AudioListener>();   // これが無いと BGM/SE が一切鳴らない
 
-            // --- Roll ----------------------------------------------------
-            var rollGo = new GameObject("CreditsRoll");
-            var streamer = rollGo.AddComponent<RollStreamer>();
-            streamer.layout = layout;
-            streamer.font = font;
-            streamer.creditsFile = credits;
-            streamer.viewCamera = cam;
-            streamer.groundLayerName = "Ground";
+            // --- Roll (タイル方式: 単語/名前ごとの CreditTile。シーンで手配置) ---
+            var rollGo = new GameObject("CreditTiles");
+            var streamer = rollGo.AddComponent<TileField>();
+            L8000.EditorTools.CreditTileBuilder.Populate(rollGo.transform, font,
+                credits != null ? credits.text : string.Empty, layout);
 
             // --- Player ------------------------------------------------
             int playerLayer = LayerMask.NameToLayer("Player");
@@ -604,8 +599,6 @@ namespace L8000.EditorTools
             weapon.bulletSpeed = 9f;
             weapon.fireCooldown = 0.22f;
             weapon.muzzleOffsetY = PlayerH * 0.5f + 0.1f;
-
-            streamer.player = playerGo.transform;
 
             // --- Player start / safety floor ---------------------------
             var startGo = new GameObject("PlayerStart");

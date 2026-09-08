@@ -115,37 +115,25 @@ namespace L8000
 
             if (DebugZigzag)
             {
-                // ジグザグ: 今の行の内側の端(中央寄り)まで歩く → 跳ぶ → 反対の列へ寄せて着地。
+                // 検証用: 上に足場があればそちらへ寄って跳ぶ。無ければ中央へ寄って跳ぶ。
                 float x = transform.position.x;
                 if (_grounded)
                 {
-                    var hd = Physics2D.Raycast(transform.position + Vector3.down * 0.2f, Vector2.down, 2f, groundMask);
-                    var ld = hd.collider != null ? hd.collider.GetComponent<CreditLineBuilder>() : null;
-                    int s = ld != null && ld.Spec != null ? ld.Spec.StaggerSide : 0;
-                    if (s == 0)   // 中央の行(Rule/@行): 上のいちばん近い行の逆側の列へ
+                    int dir = 0; float best = 999f;
+                    for (float dx = -5f; dx <= 5f; dx += 0.4f)
                     {
-                        int aboveSide = 0; float nearest = 999f;
-                        for (float dx = -6f; dx <= 6f; dx += 0.5f)
-                        {
-                            var hu = Physics2D.Raycast(transform.position + new Vector3(dx, 0.3f, 0f), Vector2.up, 6f, groundMask);
-                            var lu = hu.collider != null ? hu.collider.GetComponent<CreditLineBuilder>() : null;
-                            if (lu != null && lu.Spec != null && lu.Spec.StaggerSide != 0 && hu.distance < nearest)
-                            { nearest = hu.distance; aboveSide = lu.Spec.StaggerSide; }
-                        }
-                        s = aboveSide != 0 ? -aboveSide : 1;
+                        var hu = Physics2D.Raycast(transform.position + new Vector3(dx, 0.3f, 0f), Vector2.up, 5f, groundMask);
+                        if (hu.collider != null && hu.collider.GetComponentInParent<PlayerController>() == null && hu.distance < best)
+                        { best = hu.distance; dir = dx < -0.1f ? -1 : dx > 0.1f ? 1 : 0; }
                     }
-                    _zzSide = s;
-                    DebugAutoWalk = -_zzSide;   // 内側の端(中央)へ歩く
-                    if (_zzSide * x <= 0.55f)   // 内側の端に着いた → 跳ぶ
-                    {
-                        _buffer = jumpBuffer;
-                        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x * 0.1f, _rb.linearVelocity.y);
-                    }
+                    _zzSide = dir != 0 ? dir : (x > 0.3f ? -1 : x < -0.3f ? 1 : 0);
+                    DebugAutoWalk = _zzSide;
+                    _autoClimbCd -= Time.deltaTime;
+                    if (_autoClimbCd <= 0f) { _buffer = jumpBuffer; _autoClimbCd = 0.5f; }
                 }
                 else
                 {
-                    // 着地するまで反対の列へ横移動し続ける(上の行はその列で中央から外側へ伸びている)
-                    DebugAutoWalk = -_zzSide;
+                    DebugAutoWalk = _zzSide;
                 }
             }
         }
