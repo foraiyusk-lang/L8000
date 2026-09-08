@@ -22,7 +22,9 @@ namespace L8000.EditorTools
         const string LayoutPath    = "Assets/Settings/GameLayout.asset";
         const string CreditsPath   = "Assets/Credits/credits.txt";
         const string WhitePngPath  = "Assets/Art/white.png";
+        const string LogoPngPath   = "Assets/Art/logo.png";
         const string ScenePath     = "Assets/Scenes/Main.unity";
+        const string TitleScenePath = "Assets/Scenes/Title.unity";
         const string TmpSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
 
         [MenuItem("L8000/Build Slice 1 Scene")]
@@ -314,7 +316,9 @@ namespace L8000.EditorTools
                 var credits = AssetDatabase.LoadAssetAtPath<TextAsset>(CreditsPath);
                 if (credits == null) throw new Exception("credits.txt が見つからない: " + CreditsPath);
 
+                var logo = EnsureLogoSprite();
                 BuildScene(layout, font, white, credits);
+                BuildTitleScene(font, white, logo);
 
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
@@ -768,12 +772,239 @@ namespace L8000.EditorTools
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);
 
-            var list = EditorBuildSettings.scenes.ToList();
-            if (!list.Any(s => s.path == ScenePath))
+            SyncBuildScenes();
+        }
+
+        static void SyncBuildScenes()
+        {
+            EditorBuildSettings.scenes = new[]
             {
-                list.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
-                EditorBuildSettings.scenes = list.ToArray();
+                new EditorBuildSettingsScene(TitleScenePath, true),   // index 0 = 起動シーン
+                new EditorBuildSettingsScene(ScenePath, true),
+            };
+        }
+
+        // ---------------------------------------------------------------
+        // タイトル画面(ロゴ / なまえ / PLAY / 設定)
+        // ---------------------------------------------------------------
+        static void BuildTitleScene(TMP_FontAsset font, Sprite white, Sprite logo)
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            var cam = camGo.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 5f;
+            cam.backgroundColor = new Color(0.02f, 0.02f, 0.03f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            camGo.transform.position = new Vector3(0f, 0f, -10f);
+            camGo.AddComponent<AudioListener>();
+
+            var mgr = new GameObject("Title");
+            mgr.AddComponent<AudioManager>();
+            var ts = mgr.AddComponent<TitleScreen>();
+
+            // ロゴ(ピクセルアート)
+            var logoGo = new GameObject("Logo");
+            logoGo.transform.position = new Vector3(0f, 2.35f, 0f);
+            var logoSr = logoGo.AddComponent<SpriteRenderer>();
+            logoSr.sprite = logo;
+            logoSr.sortingOrder = 5;
+            float logoScale = 5.0f / Mathf.Max(1, logo.rect.width) * 16f;   // 目標幅 ~5.0u
+            logoGo.transform.localScale = Vector3.one * logoScale;
+            ts.logo = logoSr;
+
+            // フレーバー
+            var flavGo = new GameObject("Flavor", typeof(TextMeshPro));
+            var flav = flavGo.GetComponent<TextMeshPro>();
+            flav.font = font; flav.fontSize = 3.6f; flav.alignment = TMPro.TextAlignmentOptions.Center;
+            flav.color = new Color(0.5f, 0.55f, 0.66f);
+            flav.text = "エンドロールの いちばん下から。";
+            flavGo.transform.position = new Vector3(0f, 1.35f, 0f);
+            ts.flavor = flav;
+
+            // --- Canvas (なまえ入力 / PLAY / 設定) ---
+            var canvasGo = new GameObject("UI", typeof(RectTransform));
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(960, 540);
+            canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            new GameObject("EventSystem",
+                typeof(UnityEngine.EventSystems.EventSystem),
+                typeof(UnityEngine.EventSystems.StandaloneInputModule));
+
+            // なまえ ラベル
+            var nameLblGo = MakeUI(canvasGo.transform, "NameLabel", new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(560, 34));
+            var nameLbl = nameLblGo.gameObject.AddComponent<TextMeshProUGUI>();
+            nameLbl.font = font; nameLbl.fontSize = 20f; nameLbl.color = new Color(0.6f, 0.66f, 0.78f);
+            nameLbl.alignment = TMPro.TextAlignmentOptions.Center;
+            nameLbl.text = "なまえ";
+
+            // なまえ入力
+            var nameRow = MakeUI(canvasGo.transform, "NameRow", new Vector2(0.5f, 0.5f), new Vector2(0, -48), new Vector2(520, 54));
+            var nameBg = nameRow.gameObject.AddComponent<UnityEngine.UI.Image>();
+            nameBg.color = new Color(1f, 1f, 1f, 0.07f);
+            var nameField = nameRow.gameObject.AddComponent<TMP_InputField>();
+
+            var viewport = FillRect(nameRow, "Viewport", 16, 6);
+            viewport.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
+
+            var nameTextGo = FillRect(viewport, "Text", 0, 0);
+            var nameText = nameTextGo.gameObject.AddComponent<TextMeshProUGUI>();
+            nameText.font = font; nameText.fontSize = 26f; nameText.color = Color.white;
+            nameText.alignment = TMPro.TextAlignmentOptions.Left;
+            nameText.richText = false;
+            nameText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+
+            var placeGo = FillRect(viewport, "Placeholder", 0, 0);
+            var placeText = placeGo.gameObject.AddComponent<TextMeshProUGUI>();
+            placeText.font = font; placeText.fontSize = 24f;
+            placeText.color = new Color(1f, 1f, 1f, 0.32f);
+            placeText.text = "英字 かな カナ 漢字 記号 数字";
+            placeText.alignment = TMPro.TextAlignmentOptions.Left;
+            placeText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+
+            nameField.textViewport = viewport;
+            nameField.textComponent = nameText;
+            nameField.placeholder = placeText;
+            nameField.fontAsset = font;
+            nameField.pointSize = 26f;
+            nameField.lineType = TMP_InputField.LineType.SingleLine;
+            nameField.characterLimit = 16;
+            nameField.targetGraphic = nameBg;
+            ts.nameField = nameField;
+
+            // PLAY
+            var playGo = MakeUI(canvasGo.transform, "Play", new Vector2(0.5f, 0.5f), new Vector2(0, -140), new Vector2(300, 60));
+            var playBtn = playGo.gameObject.AddComponent<UnityEngine.UI.Button>();
+            var playImg = playGo.gameObject.AddComponent<UnityEngine.UI.Image>();
+            playImg.color = new Color(0.22f, 0.5f, 0.95f, 0.18f);
+            playBtn.targetGraphic = playImg;
+            var playTxtGo = MakeUI(playGo, "Label", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 60));
+            var playLabel = playTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
+            playLabel.font = font; playLabel.fontSize = 30f; playLabel.color = new Color(0.8f, 0.88f, 1f);
+            playLabel.alignment = TMPro.TextAlignmentOptions.Center;
+            playLabel.text = "PLAY";
+            ts.playLabel = playLabel;
+            playBtn.onClick.AddListener(ts.Play);
+
+            // 設定ボタン
+            var setGo = MakeUI(canvasGo.transform, "SettingsBtn", new Vector2(1f, 1f), new Vector2(-90, -34), new Vector2(140, 44));
+            var setBtn = setGo.gameObject.AddComponent<UnityEngine.UI.Button>();
+            var setImg = setGo.gameObject.AddComponent<UnityEngine.UI.Image>();
+            setImg.color = new Color(1f, 1f, 1f, 0.05f);
+            setBtn.targetGraphic = setImg;
+            var setTxtGo = MakeUI(setGo, "L", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140, 44));
+            var setTxt = setTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
+            setTxt.font = font; setTxt.fontSize = 22f; setTxt.color = new Color(0.7f, 0.75f, 0.85f);
+            setTxt.alignment = TMPro.TextAlignmentOptions.Center; setTxt.text = "設定";
+            setBtn.onClick.AddListener(ts.ToggleSettings);
+
+            // 設定パネル
+            var panelGo = MakeUI(canvasGo.transform, "SettingsPanel", new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(460, 220));
+            var panelImg = panelGo.gameObject.AddComponent<UnityEngine.UI.Image>();
+            panelImg.color = new Color(0.03f, 0.03f, 0.05f, 0.96f);
+            ts.settingsPanel = panelGo.gameObject;
+            ts.bgmSlider = MakeSlider(panelGo, font, "BGM 音量", new Vector2(0, 55));
+            ts.sfxSlider = MakeSlider(panelGo, font, "効果音 音量", new Vector2(0, -15));
+            var closeGo = MakeUI(panelGo, "Close", new Vector2(0.5f, 0f), new Vector2(0, 26), new Vector2(160, 40));
+            var closeBtn = closeGo.gameObject.AddComponent<UnityEngine.UI.Button>();
+            var closeImg = closeGo.gameObject.AddComponent<UnityEngine.UI.Image>();
+            closeImg.color = new Color(1f, 1f, 1f, 0.06f);
+            closeBtn.targetGraphic = closeImg;
+            var closeTxtGo = MakeUI(closeGo, "L", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(160, 40));
+            var closeTxt = closeTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
+            closeTxt.font = font; closeTxt.fontSize = 20f; closeTxt.color = Color.white;
+            closeTxt.alignment = TMPro.TextAlignmentOptions.Center; closeTxt.text = "とじる";
+            closeBtn.onClick.AddListener(ts.ToggleSettings);
+
+            // ヒント
+            var hintGo = MakeUI(canvasGo.transform, "Hint", new Vector2(0.5f, 0.5f), new Vector2(0, -180), new Vector2(600, 40));
+            var hintTxt = hintGo.gameObject.AddComponent<TextMeshProUGUI>();
+            hintTxt.font = font; hintTxt.fontSize = 20f; hintTxt.color = new Color(1f, 0.6f, 0.5f, 0f);
+            hintTxt.alignment = TMPro.TextAlignmentOptions.Center;
+            ts.hint = hintTxt;
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, TitleScenePath);
+            Log("saved scene " + TitleScenePath);
+        }
+
+        // 親いっぱいに広がる子(左右上下の内側マージン付き)
+        static RectTransform FillRect(Transform parent, string name, float padX, float padY)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(padX, padY);
+            rt.offsetMax = new Vector2(-padX, -padY);
+            return rt;
+        }
+
+        static RectTransform MakeUI(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, Vector2? pivot = null)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = anchor;
+            rt.pivot = pivot ?? new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            return rt;
+        }
+
+        static UnityEngine.UI.Slider MakeSlider(Transform parent, TMP_FontAsset font, string label, Vector2 pos)
+        {
+            var row = MakeUI(parent, label, new Vector2(0.5f, 0.5f), pos, new Vector2(400, 44));
+            var lblGo = MakeUI(row, "L", new Vector2(0f, 0.5f), new Vector2(0, 0), new Vector2(160, 40), new Vector2(0, 0.5f));
+            var lbl = lblGo.gameObject.AddComponent<TextMeshProUGUI>();
+            lbl.font = font; lbl.fontSize = 18f; lbl.color = new Color(0.75f, 0.8f, 0.9f);
+            lbl.alignment = TMPro.TextAlignmentOptions.Left; lbl.text = label;
+
+            var sldGo = MakeUI(row, "S", new Vector2(1f, 0.5f), new Vector2(-10, 0), new Vector2(210, 20), new Vector2(1f, 0.5f));
+            var slider = sldGo.gameObject.AddComponent<UnityEngine.UI.Slider>();
+            var bg = MakeUI(sldGo, "BG", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(210, 6));
+            bg.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color(1f, 1f, 1f, 0.15f);
+            var fillArea = MakeUI(sldGo, "Fill Area", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(210, 6));
+            var fill = MakeUI(fillArea, "Fill", new Vector2(0f, 0.5f), Vector2.zero, new Vector2(0, 6), new Vector2(0, 0.5f));
+            var fillImg = fill.gameObject.AddComponent<UnityEngine.UI.Image>();
+            fillImg.color = new Color(0.5f, 0.7f, 1f, 0.7f);
+            var handle = MakeUI(sldGo, "Handle", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(14, 20));
+            handle.gameObject.AddComponent<UnityEngine.UI.Image>().color = Color.white;
+            slider.fillRect = fill;
+            slider.handleRect = handle;
+            slider.targetGraphic = handle.gameObject.GetComponent<UnityEngine.UI.Image>();
+            slider.direction = UnityEngine.UI.Slider.Direction.LeftToRight;
+            slider.minValue = 0f; slider.maxValue = 1f;
+            return slider;
+        }
+
+        static Sprite EnsureLogoSprite()
+        {
+            if (!File.Exists(LogoPngPath))
+            {
+                // 仮ロゴ(scripts/make_logo.py で本物を差し替える)
+                var tex = new Texture2D(160, 40, TextureFormat.RGBA32, false);
+                var px = new Color32[160 * 40];
+                for (int i = 0; i < px.Length; i++) px[i] = new Color32(0, 0, 0, 0);
+                tex.SetPixels32(px); tex.Apply();
+                File.WriteAllBytes(LogoPngPath, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
             }
+            AssetDatabase.ImportAsset(LogoPngPath, ImportAssetOptions.ForceSynchronousImport);
+            var imp = (TextureImporter)AssetImporter.GetAtPath(LogoPngPath);
+            imp.textureType = TextureImporterType.Sprite;
+            imp.spriteImportMode = SpriteImportMode.Single;
+            imp.filterMode = FilterMode.Point;
+            imp.spritePixelsPerUnit = 16;
+            imp.textureCompression = TextureImporterCompression.Uncompressed;
+            imp.mipmapEnabled = false;
+            imp.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(LogoPngPath);
         }
 
         // ---------------------------------------------------------------

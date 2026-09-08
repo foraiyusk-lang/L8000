@@ -170,7 +170,8 @@ namespace L8000
             var p = player.position;
             float dir = (Input.GetKey(KeyCode.D) ? 1f : 0f) - (Input.GetKey(KeyCode.A) ? 1f : 0f);
             p.x = Mathf.Clamp(p.x + dir * descentNudge * dt, -7f, 7f);
-            p.y = Mathf.Max(streamer.BottomY + 0.3f, p.y - descentSpeed * dt);
+            float target = streamer.BottomY + 0.9f;   // ===== の上でぴたっと止まる
+            p.y = Mathf.Max(target, p.y - descentSpeed * dt);
             player.position = p;
             if (_prb != null) _prb.position = p;
 
@@ -178,7 +179,7 @@ namespace L8000
             c.y = Mathf.Lerp(c.y, p.y + 1.0f, 6f * dt);
             viewCamera.transform.position = c;
 
-            if (p.y <= streamer.BottomY + 0.35f) BeginBottom();
+            if (p.y <= target + 0.05f) BeginBottom();
         }
 
         // --- Bottom (===== 突破) ---------------------------------------
@@ -186,10 +187,15 @@ namespace L8000
         {
             _phase = Phase.Bottom;
             voidRiser.Stop();
-            if (_prb != null) { _prb.bodyType = RigidbodyType2D.Dynamic; _prb.linearVelocity = Vector2.zero; }
+            // ===== のすぐ上へスナップして着地
+            var p = new Vector3(Mathf.Clamp(player.position.x, -2f, 2f), streamer.BottomY + 0.9f, 0f);
+            player.position = p;
+            if (_prb != null) { _prb.bodyType = RigidbodyType2D.Dynamic; _prb.position = p; _prb.linearVelocity = Vector2.zero; }
+            Physics2D.SyncTransforms();
             if (playerController != null) playerController.enabled = true;
             if (weapon != null) { weapon.CanFire = true; weapon.FireDown = true; }
-            ScreenFx.Toast("↓ Enter で 下へ", new Color(0.85f, 0.9f, 1f), 3.5f);
+            var cam = viewCamera.transform.position; cam.y = streamer.BottomY + 2.5f; viewCamera.transform.position = cam;
+            ScreenFx.Toast("この線に 触れている ―  ↓Enter で 下へ", new Color(0.85f, 0.9f, 1f), 4f);
         }
 
         void TickBottom()

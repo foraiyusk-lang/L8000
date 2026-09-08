@@ -25,6 +25,10 @@ namespace L8000
         {
             Instance = this;
 
+            // タイトルの設定を反映
+            bgmVolume = PlayerPrefs.GetFloat("l8000_bgm", 0.7f) * 0.5f;
+            sfxVolume = PlayerPrefs.GetFloat("l8000_sfx", 0.8f) * 0.7f;
+
             _bgmFwd = Load("bgm") ?? ProcBgm();
             _bgmRev = Load("bgm_rev") ?? _bgmFwd;
 
@@ -153,6 +157,13 @@ namespace L8000
         {
             _sfxKilled = true;
             if (_sfx != null) _sfx.Stop();
+        }
+
+        /// <summary>設定スライダーの反映。</summary>
+        public void ApplyVolumes()
+        {
+            if (_bgm != null && _xfadeCo == null) _bgm.volume = bgmVolume;
+            if (_sfx != null) _sfx.volume = sfxVolume;
         }
 
         // --- フォールバック用の手続き生成(Resources が無い場合) ------
