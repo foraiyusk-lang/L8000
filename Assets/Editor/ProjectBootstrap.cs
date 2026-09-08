@@ -37,12 +37,11 @@ namespace L8000.EditorTools
         static int _capFrame;
         static string _capOut = "Screenshots/slice1.png";
         static bool _capClimb;
-        // 検証: 自動ジャンプで実際に登らせ、この高さを超えるたびに撮影。詰まったら報告。
-        static readonly float[] _capMilestones = { 4f, 90f, 190f, 300f, 395f };
-        static int _capMile;
-        static float _capMaxY;
-        static double _capLastProgress;
-        static double _capLastLog;
+        // 検証: プレイヤーを各高さへワープ → 「・」を上へ連射 → 待って撮影。文字が消えるか確認。
+        static readonly float[] _capStops = { 4f, 55f, 130f, 230f };
+        static int _capStopIdx;
+        static int _capPhase;   // 0=移動/待機, 1=連射, 2=撮影待ち
+        static int _capPhaseFrame;
 
         public static void PlayCapture()
         {
@@ -62,10 +61,9 @@ namespace L8000.EditorTools
 
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             _capFrame = 0;
-            _capMile = 0;
-            _capMaxY = -999f;
-            _capLastProgress = 0;
-            _capLastLog = 0;
+            _capStopIdx = 0;
+            _capPhase = 0;
+            _capPhaseFrame = 0;
             EditorApplication.update += CapUpdate;
             Log("entering play mode for capture");
             EditorApplication.EnterPlaymode();
@@ -96,49 +94,56 @@ namespace L8000.EditorTools
             if (follow != null && follow.enabled) follow.enabled = false; // 撮影中はカメラを手動で真上に
 
             bool done = false;
-            string doneReason = "milestones cleared";
 
-            if (_capClimb && pc != null)
+            var weapon = UnityEngine.Object.FindFirstObjectByType<Weapon>();
+
+            if (_capClimb && pc != null && _capStopIdx < _capStops.Length)
             {
-                PlayerController.DebugAutoClimb = true;             // 実際に物理でジャンプして登らせる
-                float py = pc.transform.position.y;
-                if (cam != null) cam.transform.position = new Vector3(0f, py, -10f);
+                float y = _capStops[_capStopIdx];
+                var rb = pc.GetComponent<Rigidbody2D>();
+                _capPhaseFrame++;
 
-                double now = EditorApplication.timeSinceStartup;
-                if (py > _capMaxY + 0.1f) { _capMaxY = py; _capLastProgress = now; }
-
-                if (now - _capLastLog > 2.0)
+                if (_capPhase == 0) // ワープして静止、少し待つ
                 {
-                    _capLastLog = now;
-                    Log($"climb: y={py:0.0} maxY={_capMaxY:0.0} grounded={pc.IsGrounded}");
+                    pc.transform.position = new Vector3(-0.3f, y + 1.0f, 0f);
+                    if (rb != null) { rb.linearVelocity = Vector2.zero; rb.simulated = false; }
+                    if (cam != null) cam.transform.position = new Vector3(0f, y, -10f);
+                    Weapon.DebugAutoFire = false;
+                    if (_capPhaseFrame > 20)
+                    {
+                        CaptureCameraTo(Path.ChangeExtension(_capOut, null) + $"_{_capStopIdx}a_before.png");
+                        _capPhase = 1; _capPhaseFrame = 0;
+                    }
+                }
+                else if (_capPhase == 1) // 上へ連射
+                {
+                    if (rb != null) rb.simulated = false;
+                    Weapon.DebugAutoFire = true;
+                    if (_capPhaseFrame > 120) { Weapon.DebugAutoFire = false; _capPhase = 2; _capPhaseFrame = 0; }
+                }
+                else // 弾が飛び切るのを待って撮影
+                {
+                    if (_capPhaseFrame > 90)
+                    {
+                        CaptureCameraTo(Path.ChangeExtension(_capOut, null) + $"_{_capStopIdx}b_after.png");
+                        Log($"stop y={y}: destroyed so far = {CreditLineBuilder.TotalCharsDestroyed}");
+                        _capStopIdx++;
+                        _capPhase = 0; _capPhaseFrame = 0;
+                    }
                 }
 
-                if (_capMile < _capMilestones.Length && _capMaxY >= _capMilestones[_capMile])
-                {
-                    CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_" + _capMile + ".png");
-                    Log($"reached milestone {_capMilestones[_capMile]} (maxY={_capMaxY:0.0})");
-                    _capMile++;
-                }
-
-                if (_capMile >= _capMilestones.Length) { done = true; }
-                else if (_capLastProgress > 0 && now - _capLastProgress > 12.0)
-                {
-                    done = true;
-                    doneReason = $"STALLED at y={_capMaxY:0.0} (next milestone {_capMilestones[_capMile]})";
-                    CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_stall.png");
-                }
-                else if (now - _capStartTime > 240.0) { done = true; doneReason = "time budget"; }
+                if (EditorApplication.timeSinceStartup - _capStartTime > 300.0) done = true;
             }
             else done = true;
 
             if (!done) return;
 
             EditorApplication.update -= CapUpdate;
-            Log("[Bootstrap] capture end: " + doneReason);
+            Weapon.DebugAutoFire = false;
             DumpDiagnostics();
-            PlayerController.DebugAutoClimb = false;
+            Log($"[Bootstrap] total chars destroyed by bullets = {CreditLineBuilder.TotalCharsDestroyed}");
             EditorApplication.isPlaying = false;
-            EditorSettings.enterPlayModeOptionsEnabled = false; // プロジェクト設定を元に戻す
+            EditorSettings.enterPlayModeOptionsEnabled = false;
             AssetDatabase.SaveAssets();
             EditorApplication.Exit(0);
         }
@@ -433,11 +438,13 @@ namespace L8000.EditorTools
             playerGo.transform.position = new Vector3(0f, 2f, 0f);
             // localScale は 1 のまま(スクリプトの接地判定は非スケールの world 距離で計算するため)
 
-            // 見た目(スケールした子。当たり判定とは分離)
+            // 細い正方形。文字間のスペース1個分の隙間を通れるサイズ。
+            const float PlayerW = 0.45f;
+            const float PlayerH = 0.55f;
             const float visSprite = 8f / 16f; // white.png 8px @ PPU16 = 0.5 unit
             var vis = new GameObject("Sprite");
             vis.transform.SetParent(playerGo.transform, false);
-            vis.transform.localScale = Vector3.one * (0.7f / visSprite);
+            vis.transform.localScale = new Vector3(PlayerW / visSprite, PlayerH / visSprite, 1f);
             var sr = vis.AddComponent<SpriteRenderer>();
             sr.sprite = white;
             sr.color = new Color(0.22f, 0.92f, 1f); // シアン。白い文字と混ざらない。
@@ -445,26 +452,32 @@ namespace L8000.EditorTools
 
             var outline = new GameObject("Outline");
             outline.transform.SetParent(playerGo.transform, false);
-            outline.transform.localScale = Vector3.one * (0.92f / visSprite);
+            outline.transform.localScale = new Vector3((PlayerW + 0.12f) / visSprite, (PlayerH + 0.12f) / visSprite, 1f);
             var osr = outline.AddComponent<SpriteRenderer>();
             osr.sprite = white;
             osr.color = Color.black;
             osr.sortingOrder = 9;
 
             var rb = playerGo.AddComponent<Rigidbody2D>();
-            rb.gravityScale = 3.1f;
+            rb.gravityScale = 3.0f;
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             var col = playerGo.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(0.7f, 0.7f);
+            col.size = new Vector2(PlayerW, PlayerH);
             // 壁に張り付かないよう摩擦低め
             col.sharedMaterial = new PhysicsMaterial2D("PlayerLowFriction") { friction = 0.05f, bounciness = 0f };
 
             var pc = playerGo.AddComponent<PlayerController>();
             int groundLayer = LayerMask.NameToLayer("Ground");
             pc.groundMask = groundLayer >= 0 ? (1 << groundLayer) : Physics2D.AllLayers;
+            pc.groundCheckSize = new Vector2(PlayerW - 0.06f, 0.14f);
+            pc.groundCheckOffsetY = -(PlayerH * 0.5f + 0.03f);
+
+            // --- 武器(Enter で「・」発射) ---------------------------
+            var weapon = playerGo.AddComponent<Weapon>();
+            weapon.font = font;
 
             // --- Player start / safety floor ---------------------------
             var startGo = new GameObject("PlayerStart");

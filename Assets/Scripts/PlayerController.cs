@@ -33,7 +33,7 @@ namespace L8000
         public KeyCode leftKey = KeyCode.A;
         public KeyCode rightKey = KeyCode.D;
         public KeyCode jumpKey = KeyCode.W;
-        public KeyCode fireKey = KeyCode.Return;
+        // 発射(Enter)は Weapon コンポーネントが担当
 
         /// <summary>検証用: true の間、接地するたびに自動でジャンプし続ける(登り続ける)。</summary>
         public static bool DebugAutoClimb;
@@ -61,7 +61,6 @@ namespace L8000
         void Update()
         {
             if (Input.GetKeyDown(jumpKey)) _buffer = jumpBuffer;
-            if (Input.GetKeyDown(fireKey)) OnFire();
 
             // 検証用オートクライム: 接地して落ち着いてから1回だけジャンプ(人間の操作に近づける)
             _autoClimbCd = Mathf.Max(0f, _autoClimbCd - Time.deltaTime);
@@ -104,9 +103,6 @@ namespace L8000
 
             _rb.linearVelocity = new Vector2(vx, vy);
         }
-
-        /// <summary>次スライスの射撃フック。今回は何もしない。</summary>
-        void OnFire() { }
 
         void OnDrawGizmosSelected()
         {
