@@ -98,33 +98,31 @@ namespace L8000.EditorTools
 
             bool done = false;
 
-            // --- Stage 0: スタート足場に乗せて開始トリガ確認 → 自動スクロール観察 ---
+            // --- Stage 0: 中央到達で自動スクロールが始まるか確認 ---
             if (_capStage == 0)
             {
                 _capPhaseFrame++;
                 var streamer0 = UnityEngine.Object.FindFirstObjectByType<RollStreamer>();
-                float startY = 0f;
-                if (streamer0 != null && streamer0.Roll != null)
-                    foreach (var l in streamer0.Roll.Lines) if (l.IsStart) { startY = l.WorldY; break; }
+                float topY = streamer0 != null && streamer0.Roll != null ? streamer0.Roll.TopY : 0f;
+                var rb0 = pc != null ? pc.GetComponent<Rigidbody2D>() : null;
+                if (rb0 != null) rb0.simulated = false;
 
-                if (_capPhaseFrame >= 40 && _capPhaseFrame <= 70 && pc != null)
-                {
-                    // @THANKYOUFORPLAYING の真上に置いて自然に着地させる(30フレーム押さえる)
-                    pc.transform.position = new Vector3(0f, startY + 0.35f, 0f);
-                    var rb0 = pc.GetComponent<Rigidbody2D>();
-                    if (rb0 != null) rb0.linearVelocity = new Vector2(0f, -0.5f);
-                }
+                // 下1/4 → 中央より少し上 へワープしていく
+                if (_capPhaseFrame < 120 && pc != null)
+                    pc.transform.position = new Vector3(0f, topY * 0.25f, 0f);
+                else if (pc != null)
+                    pc.transform.position = new Vector3(0f, topY * 0.55f, 0f);
 
-                if (_capPhaseFrame % 45 == 0)
-                    Log($"stage0 f{_capPhaseFrame}: playerY={(pc != null ? pc.transform.position.y : 0):0.00} " +
-                        $"grounded={(pc != null && pc.IsGrounded)} started={(follow != null && follow.Started)} " +
-                        $"camY={(cam != null ? cam.transform.position.y : 0f):0.00}");
-                if (_capPhaseFrame == 130) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll0.png");
+                if (_capPhaseFrame % 40 == 0)
+                    Log($"stage0 f{_capPhaseFrame}: playerY={(pc != null ? pc.transform.position.y : 0):0.0}/{topY:0.0} " +
+                        $"started={(follow != null && follow.Started)} camY={(cam != null ? cam.transform.position.y : 0f):0.0}");
+                if (_capPhaseFrame == 110) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll0.png");
 
                 if (_capPhaseFrame > 360)
                 {
                     CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll1.png");
-                    Log($"stage0 done. started={(follow != null && follow.Started)} camY={(cam != null ? cam.transform.position.y : 0f):0.0}");
+                    Log($"stage0 done. started={(follow != null && follow.Started)} (中央=~{topY * 0.5f:0.0}) camY={(cam != null ? cam.transform.position.y : 0f):0.0}");
+                    if (rb0 != null) rb0.simulated = true;
                     _capStage = 1;
                     _capPhaseFrame = 0;
                 }

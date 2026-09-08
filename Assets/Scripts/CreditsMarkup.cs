@@ -13,8 +13,6 @@ namespace L8000
         public string Right;  // RoleName の名前。それ以外は null。
         public float WorldY;
         public bool HasCJK;   // 列幅(半角/全角)の切り替え用。行内に CJK があれば true。
-        public bool IsStart;  // この足場に乗ったらゲーム開始(下から迫るのが始まる)。
-        public bool OneWay;   // 下からすり抜けられる(スタート地点の導入用)。
     }
 
     public class CreditsRoll
@@ -83,16 +81,13 @@ namespace L8000
                 var spec = new LineSpec();
                 if (trimmed.Length >= 3 && IsAllEquals(trimmed))
                 {
-                    spec.Kind = LineKind.Rule;    // ===== 全幅の床/仕切り
+                    spec.Kind = LineKind.Rule;    // ===== 全幅の床/仕切り(ソリッド)
                     spec.Left = trimmed;
-                    spec.OneWay = true;
                 }
                 else if (trimmed.StartsWith("@"))
                 {
-                    spec.Kind = LineKind.Name;    // @TEXT = ここに乗るとゲーム開始
+                    spec.Kind = LineKind.Name;    // @TEXT = 空白を詰めたい名前行など(装飾なし)
                     spec.Left = trimmed.Substring(1).Trim();
-                    spec.IsStart = true;
-                    spec.OneWay = true;           // 下からすり抜けて乗れる(導入)
                 }
                 else if (trimmed.StartsWith("#"))
                 {

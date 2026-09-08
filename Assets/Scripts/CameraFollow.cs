@@ -3,7 +3,8 @@ using UnityEngine;
 namespace L8000
 {
     /// <summary>
-    /// カメラはゲーム開始(スタート足場に乗る)まで動かない。開始後は一定速度で上へ流れ続ける。
+    /// カメラはプレイヤーを追って上へ登る。プレイヤーがロールの一定割合(既定=中央)まで
+    /// 登ると「自動で上へ流れる(下から迫る)」が始まる。それまでは時間制限なし。
     /// カメラ Y は下がらない(単調増加)。左右は追従しない。ロール頂上でクランプ。
     /// </summary>
     [RequireComponent(typeof(Camera))]
@@ -16,14 +17,17 @@ namespace L8000
         [Tooltip(">0 なら Awake で camera.orthographicSize をこの値にする。大きいほど文字が小さく見える。")]
         public float orthoSize = 10f;
 
-        [Header("自動スクロール")]
-        [Tooltip("上へ流れる速さ(world units/秒)。ゲーム開始後のみ。")]
+        [Header("自動スクロール(下から迫る)")]
+        [Tooltip("プレイヤーがロール全高のこの割合まで登ると自動スクロール開始。0.5=中央。")]
+        [Range(0f, 1f)] public float scrollStartFraction = 0.5f;
+
+        [Tooltip("上へ流れる速さ(world units/秒)。開始後のみ。")]
         public float autoScrollSpeed = 0.85f;
 
-        [Tooltip("ゲーム開始(スタート足場に乗る)からこの秒数待ってからスクロール開始。")]
-        public float startDelay = 0.8f;
+        [Tooltip("開始条件を満たしてからこの秒数待ってスクロール開始。")]
+        public float startDelay = 0.5f;
 
-        [Tooltip("true にすると開始トリガー無しで最初からスクロール(デバッグ用)。")]
+        [Tooltip("true にすると最初からスクロール(デバッグ用)。")]
         public bool autoStart = false;
 
         [Header("プレイヤー追従")]
@@ -49,9 +53,6 @@ namespace L8000
 
         public bool Started => _started;
 
-        void OnEnable() { PlayerController.StartLineReached += BeginScroll; }
-        void OnDisable() { PlayerController.StartLineReached -= BeginScroll; }
-
         void Awake()
         {
             _cam = GetComponent<Camera>();
@@ -63,7 +64,9 @@ namespace L8000
             }
             _y = transform.position.y;
             _scrollY = _y;
-            if (autoStart) _started = true;
+            // 古いシーンで未設定(0)のまま来た場合の保険。即開始したいときは autoStart を使う。
+            if (scrollStartFraction < 0.02f) scrollStartFraction = 0.5f;
+            if (autoStart) BeginScroll();
         }
 
         public void BeginScroll()
@@ -75,6 +78,11 @@ namespace L8000
 
         void LateUpdate()
         {
+            // 中央まで登ったら自動スクロール開始
+            if (!_started && target != null && roll != null && roll.TopY > 1f
+                && target.position.y >= roll.TopY * scrollStartFraction)
+                BeginScroll();
+
             if (_started)
             {
                 _sinceStart += Time.deltaTime;
@@ -96,8 +104,7 @@ namespace L8000
                 float maxCenter = roll.TopY + topPadding - halfH;
                 if (maxCenter < minCenter) maxCenter = minCenter;
                 desired = Mathf.Clamp(desired, minCenter, maxCenter);
-                if (_scrollY > maxCenter) _scrollY = maxCenter;
-                if (_scrollY < minCenter) _scrollY = minCenter;
+                _scrollY = Mathf.Clamp(_scrollY, minCenter, maxCenter);
             }
 
             _y = Mathf.SmoothDamp(_y, desired, ref _vel, followSmooth);

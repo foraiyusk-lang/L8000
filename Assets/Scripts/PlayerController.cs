@@ -38,15 +38,11 @@ namespace L8000
         /// <summary>検証用: true の間、接地するたびに自動でジャンプし続ける(登り続ける)。</summary>
         public static bool DebugAutoClimb;
 
-        /// <summary>IsStart の足場に初めて乗った時に1回だけ発火(ゲーム開始 = 下から迫る開始)。</summary>
-        public static event System.Action StartLineReached;
-
         Rigidbody2D _rb;
         bool _grounded;
         float _coyote;
         float _buffer;
         float _autoClimbCd;
-        bool _startFired;
 
         public bool IsGrounded => _grounded;
 
@@ -83,16 +79,6 @@ namespace L8000
             Collider2D hit = Physics2D.OverlapBox(checkPos, groundCheckSize, 0f, groundMask);
             // 上昇中は接地とみなさない → 空中連続ジャンプを防ぐ
             _grounded = hit != null && _rb.linearVelocity.y <= 0.1f;
-
-            if (_grounded && !_startFired && hit != null)
-            {
-                var lb = hit.GetComponentInParent<CreditLineBuilder>();
-                if (lb != null && lb.Spec != null && lb.Spec.IsStart)
-                {
-                    _startFired = true;
-                    StartLineReached?.Invoke();
-                }
-            }
 
             _coyote = _grounded ? coyoteTime : Mathf.Max(0f, _coyote - dt);
             _buffer = Mathf.Max(0f, _buffer - dt);

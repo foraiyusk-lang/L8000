@@ -38,8 +38,6 @@ namespace L8000
         int _usedSegs;
 
         Rigidbody2D _body;
-        PlatformEffector2D _effector;
-        bool _oneWay;
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
@@ -55,13 +53,9 @@ namespace L8000
             _body.bodyType = RigidbodyType2D.Kinematic;
             _body.simulated = true;
 
-            // 常時 enabled。個々のコライダの usedByEffector で solid / one-way を切り替える。
-            _effector = GetComponent<PlatformEffector2D>();
-            if (_effector == null) _effector = gameObject.AddComponent<PlatformEffector2D>();
-            _effector.useOneWay = true;
-            _effector.useOneWayGrouping = true;
-            _effector.surfaceArc = 160f;
-            _effector.rotationalOffset = 0f;
+            // すべてソリッド(下からも横からも抜けられない)。one-way 効果は使わない。
+            var eff = GetComponent<PlatformEffector2D>();
+            if (eff != null) eff.enabled = false;
         }
 
         public void Configure(LineSpec spec)
@@ -69,7 +63,6 @@ namespace L8000
             Spec = spec;
             Active = true;
             _usedSegs = 0;
-            _oneWay = spec.OneWay;
 
             transform.position = new Vector3(0f, spec.WorldY, 0f);
             gameObject.name = $"Line[{spec.Kind}] y{spec.WorldY:0.0}";
@@ -203,7 +196,6 @@ namespace L8000
             var box = GetBox(seg);
             box.enabled = true;
             box.isTrigger = false;
-            box.usedByEffector = _oneWay;
             box.offset = new Vector2(0f, _layout.colliderYOffset);
             box.size = new Vector2(240f, Mathf.Max(0.1f, cell * chr));
             seg.boxChar[seg.usedBoxes - 1] = -1;
@@ -310,7 +302,6 @@ namespace L8000
                 BoxCollider2D box = GetBox(seg);
                 box.enabled = true;
                 box.isTrigger = false;
-                box.usedByEffector = _oneWay;
                 box.offset = new Vector2((x0 + x1) * 0.5f, _layout.colliderYOffset);
                 box.size = new Vector2(Mathf.Max(0.03f, w), Mathf.Max(0.1f, colliderH));
                 seg.boxChar[seg.usedBoxes - 1] = i;
