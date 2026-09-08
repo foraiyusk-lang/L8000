@@ -30,7 +30,7 @@ namespace L8000
                 tex.SetPixels32(px);
                 tex.Apply();
                 graphicsNoise.texture = tex;
-                graphicsNoise.color = new Color(1f, 1f, 1f, 0.22f);
+                graphicsNoise.color = new Color(1f, 1f, 1f, 0.13f);
             }
         }
 
