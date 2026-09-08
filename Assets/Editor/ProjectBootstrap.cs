@@ -38,10 +38,12 @@ namespace L8000.EditorTools
         static string _capOut = "Screenshots/slice1.png";
         static bool _capClimb;
         // 検証: プレイヤーを各高さへワープ → 「・」を上へ連射 → 待って撮影。文字が消えるか確認。
-        static readonly float[] _capStops = { 4f, 55f, 130f, 230f };
+        static readonly float[] _capStops = { 3f, 35f, 80f, 150f };
         static int _capStopIdx;
+        static int _capStage;   // 0=自動スクロール観察, 1=撃ちテスト
         static int _capPhase;   // 0=移動/待機, 1=連射, 2=撮影待ち
         static int _capPhaseFrame;
+        static double _capLastLog;
 
         public static void PlayCapture()
         {
@@ -61,9 +63,11 @@ namespace L8000.EditorTools
 
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             _capFrame = 0;
+            _capStage = 0;
             _capStopIdx = 0;
             _capPhase = 0;
             _capPhaseFrame = 0;
+            _capLastLog = 0;
             EditorApplication.update += CapUpdate;
             Log("entering play mode for capture");
             EditorApplication.EnterPlaymode();
@@ -91,11 +95,32 @@ namespace L8000.EditorTools
             var pc = UnityEngine.Object.FindFirstObjectByType<PlayerController>();
             var cam = Camera.main;
             var follow = cam != null ? cam.GetComponent<CameraFollow>() : null;
-            if (follow != null && follow.enabled) follow.enabled = false; // 撮影中はカメラを手動で真上に
 
             bool done = false;
 
-            var weapon = UnityEngine.Object.FindFirstObjectByType<Weapon>();
+            // --- Stage 0: 自動スクロールを観察(follow 有効のまま。文字サイズ確認も) ---
+            if (_capStage == 0)
+            {
+                _capPhaseFrame++;
+                double now0 = EditorApplication.timeSinceStartup;
+                if (now0 - _capLastLog > 1.0)
+                {
+                    _capLastLog = now0;
+                    Log($"scroll: camY={(cam != null ? cam.transform.position.y : 0f):0.00} frame={_capFrame}");
+                }
+                if (_capPhaseFrame == 40) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll0.png");
+                if (_capPhaseFrame > 300)
+                {
+                    CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll1.png");
+                    Log($"scroll watch done. camY moved to {(cam != null ? cam.transform.position.y : 0f):0.0}");
+                    _capStage = 1;
+                    _capPhaseFrame = 0;
+                }
+                return;
+            }
+
+            // --- Stage 1: 撮影中はカメラを手動制御 ---
+            if (follow != null && follow.enabled) follow.enabled = false;
 
             if (_capClimb && pc != null && _capStopIdx < _capStops.Length)
             {
@@ -423,7 +448,7 @@ namespace L8000.EditorTools
             camGo.tag = "MainCamera";
             var cam = camGo.AddComponent<Camera>();
             cam.orthographic = true;
-            cam.orthographicSize = 11.25f;   // 参照高 360px / PPU16 相当。テキストを大きく見せたいなら下げる。
+            cam.orthographicSize = 10f;   // CameraFollow.orthoSize で上書きされる。大きいほど文字が小さく見える。
             cam.backgroundColor = Color.black;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.nearClipPlane = -50f;
@@ -447,9 +472,9 @@ namespace L8000.EditorTools
             playerGo.transform.position = new Vector3(0f, 2f, 0f);
             // localScale は 1 のまま(スクリプトの接地判定は非スケールの world 距離で計算するため)
 
-            // 細い正方形。文字間のスペース1個分の隙間を通れるサイズ。
-            const float PlayerW = 0.45f;
-            const float PlayerH = 0.55f;
+            // 細い正方形。文字間のスペース1個分(halfCellWidth=0.36)の隙間を通れるサイズ。
+            const float PlayerW = 0.3f;
+            const float PlayerH = 0.4f;
             const float visSprite = 8f / 16f; // white.png 8px @ PPU16 = 0.5 unit
             var vis = new GameObject("Sprite");
             vis.transform.SetParent(playerGo.transform, false);
@@ -487,6 +512,12 @@ namespace L8000.EditorTools
             // --- 武器(Enter で「・」発射) ---------------------------
             var weapon = playerGo.AddComponent<Weapon>();
             weapon.font = font;
+            weapon.bulletColliderRadius = 0.08f;
+            weapon.bulletVisualHeight = 0.16f;
+            weapon.bulletSpeed = 20f;
+            weapon.muzzleOffsetY = PlayerH * 0.5f + 0.06f;
+
+            streamer.player = playerGo.transform;
 
             // --- Player start / safety floor ---------------------------
             var startGo = new GameObject("PlayerStart");

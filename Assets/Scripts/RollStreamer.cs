@@ -16,6 +16,7 @@ namespace L8000
         public TMP_FontAsset font;
         public TextAsset creditsFile;
         public Camera viewCamera;
+        public Transform player;   // カメラ外に落ちてもプレイヤー周辺の足場は残す
         public string groundLayerName = "Ground";
 
         CreditsRoll _roll;
@@ -47,12 +48,22 @@ namespace L8000
             float minY = camY - halfH - layout.streamMarginY;
             float maxY = camY + halfH + layout.streamMarginY;
 
+            // プレイヤー周辺(画面外に落ちても足場が消えないように)
+            float pMin = float.MaxValue, pMax = float.MinValue;
+            if (player != null)
+            {
+                float py = player.position.y;
+                pMin = py - 8f;
+                pMax = py + 8f;
+            }
+
             int budget = Mathf.Max(1, layout.maxSpawnPerFrame);
             var lines = _roll.Lines;
 
             for (int i = 0; i < lines.Count; i++)
             {
-                bool inView = lines[i].WorldY >= minY && lines[i].WorldY <= maxY;
+                float y = lines[i].WorldY;
+                bool inView = (y >= minY && y <= maxY) || (y >= pMin && y <= pMax);
                 if (inView)
                 {
                     if (_live[i] == null && budget > 0)

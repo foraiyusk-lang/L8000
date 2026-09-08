@@ -16,38 +16,38 @@ namespace L8000
     public class GameLayout : ScriptableObject
     {
         [Header("スケール")]
-        [Tooltip("1セル高 = TMP fontSize(world)。テキストを大きくしたいときはここを上げて lineStepY も合わせる。")]
-        public float cellHeight = 1.0f;
+        [Tooltip("1セル高(world units)。小さくすると文字が小さくなる。lineStepY 等も合わせて調整。")]
+        public float cellHeight = 0.68f;
 
-        [Tooltip("欧文(半角)1文字の列幅。cellHeight を基準にした比率で持つとズレにくい。")]
-        public float halfCellWidth = 0.5f;
+        [Tooltip("欧文(半角)1文字の列幅。プレイヤー幅より広いこと(隙間を通れるように)。")]
+        public float halfCellWidth = 0.36f;
 
         [Tooltip("CJK/全角1文字の列幅。通常は halfCellWidth の2倍。")]
-        public float fullCellWidth = 1.0f;
+        public float fullCellWidth = 0.72f;
 
         [Header("行の縦間隔")]
         [Tooltip("クレジット1エントリごとの基本の縦送り(world units)。")]
-        public float lineStepY = 1.5f;
+        public float lineStepY = 1.05f;
 
         [Tooltip("空行 1つあたりの追加の縦送り(world units)。")]
-        public float blankLineGap = 0.5f;
+        public float blankLineGap = 0.34f;
 
         [Tooltip("見出し(#)の前後に足す余白(world units)。")]
-        public float headerPad = 0.4f;
+        public float headerPad = 0.28f;
 
         [Tooltip("[gap N] 1単位あたりの縦送り(world units)。")]
-        public float gapUnit = 0.6f;
+        public float gapUnit = 0.42f;
 
         [Tooltip("連続する足場の最大の縦間隔(world units)。ジャンプ到達高より必ず小さく。" +
                  "credits.txt に大きな [gap] があってもここで頭打ちにして『必ず登れる』を保証する。")]
-        public float maxLineGap = 2.6f;
+        public float maxLineGap = 1.85f;
 
         [Tooltip("連続する足場の最小の縦間隔(world units)。足場が重ならないように。")]
-        public float minLineGap = 1.3f;
+        public float minLineGap = 0.9f;
 
         [Header("役割 :: 名前 の2カラム")]
-        [Tooltip("中央線から役割/名前をどれだけ離すか(world units)。")]
-        public float centerGap = 0.4f;
+        [Tooltip("中央線から役割/名前をどれだけ離すか(world units)。役割と名前の間の隙間になる。")]
+        public float centerGap = 0.28f;
 
         [Header("色 / スケール")]
         public Color nameColor = Color.white;
@@ -60,14 +60,14 @@ namespace L8000
         public float headerScale = 1.35f;
 
         [Tooltip("タイトル(=)のフォント倍率。")]
-        public float titleScale = 1.8f;
+        public float titleScale = 1.7f;
 
         [Header("ストリーミング(画面内だけ実体化)")]
         [Tooltip("カメラ表示範囲の上下に足すマージン(world units)。大きいほど早めに生成・遅く破棄。")]
-        public float streamMarginY = 10f;
+        public float streamMarginY = 16f;
 
         [Tooltip("1フレームに新規実体化する行数の上限(生成スパイク回避)。")]
-        public int maxSpawnPerFrame = 3;
+        public int maxSpawnPerFrame = 4;
 
         [Header("足場(当たり判定)")]
         [Tooltip("文字セル高に対するコライダ高の比率。厚めにするとすり抜け(トンネリング)しにくい。")]
