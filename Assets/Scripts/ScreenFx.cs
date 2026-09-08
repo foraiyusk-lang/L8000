@@ -96,6 +96,19 @@ namespace L8000
             var cc = vignette.color; cc.a = target; vignette.color = cc;
         }
 
+        /// <summary>全演出を即座に消す(終幕に入るときなど)。</summary>
+        public static void ClearAll()
+        {
+            var s = Instance;
+            if (s == null) return;
+            if (s._toastCo != null) { s.StopCoroutine(s._toastCo); s._toastCo = null; }
+            if (s._bannerCo != null) { s.StopCoroutine(s._bannerCo); s._bannerCo = null; }
+            if (s._vigCo != null) { s.StopCoroutine(s._vigCo); s._vigCo = null; }
+            if (s.toast != null) { var c = s.toast.color; c.a = 0f; s.toast.color = c; }
+            if (s.banner != null) { var c = s.banner.color; c.a = 0f; s.banner.color = c; }
+            if (s.vignette != null) { var c = s.vignette.color; c.a = 0f; s.vignette.color = c; }
+        }
+
         /// <summary>画面下に常時表示。null/空 で消す。</summary>
         public static void Banner(string msg, Color color)
         {

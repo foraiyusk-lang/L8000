@@ -42,6 +42,13 @@ namespace L8000
         {
             if (hud != null) hud.Kill();
             Time.timeScale = 1f;
+            ScreenFx.ClearAll();   // 「↓ Enter」バナー・トースト・ビネットを消す
+
+            // 進行と無を止める(GameFlow が再発動しないように)
+            var flow = FindFirstObjectByType<GameFlow>();
+            if (flow != null) flow.enabled = false;
+            var vr = FindFirstObjectByType<VoidRiser>();
+            if (vr != null) vr.Stop();
 
             // 暗転
             if (blackout != null)
@@ -51,8 +58,7 @@ namespace L8000
             }
 
             // 世界を消す(プレイヤーだけ残す)
-            var vr = FindFirstObjectByType<VoidRiser>();
-            if (vr != null) vr.Stop();
+            if (vr != null) { vr.Stop(); vr.gameObject.SetActive(false); }
             if (streamer != null) streamer.gameObject.SetActive(false);
 
             // カメラとプレイヤーを原点にそろえる(決め打ち)
