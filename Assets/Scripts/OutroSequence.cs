@@ -16,7 +16,7 @@ namespace L8000
         public VoidRiser voidRiser;
 
         [Tooltip("タイトル行にこの距離まで近づいたら接触とみなす。")]
-        public float titleTouchRadius = 0.9f;
+        public float titleTouchRadius = 1.5f;
 
         [Tooltip("降りる速さ(world units / 秒)。")]
         public float descendSpeed = 6f;
@@ -35,6 +35,9 @@ namespace L8000
         {
             if (Active) { Descend(); return; }
             if (player == null || streamer == null || streamer.TopY <= 1f) return;
+
+            // タイトル行より上に到達 = 触れた
+            if (player.position.y >= streamer.TopY) { Begin(); return; }
 
             // タイトル行付近まで来たら発動(乗る・頭で触れる・かすめる)
             if (player.position.y < streamer.TopY - 4f) return;

@@ -57,8 +57,10 @@ namespace L8000
         public static bool DebugForceJump;
 
         [Header("残り回数(入力コスト)")]
-        [Tooltip("左右キーを押し続けている間、この秒数ごとに残り回数を1消費する。")]
-        public float moveCostInterval = 0.15f;
+        [Tooltip("横移動した距離がこの world units ぶんたまるごとに残り回数を1消費する。小さいほど早く減る。")]
+        public float moveCostDistance = 0.15f;
+        [Tooltip("1ジャンプの消費。")]
+        public int jumpCost = 2;
 
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
         public bool IsGrounded => _grounded;
@@ -76,11 +78,13 @@ namespace L8000
         float _autoClimbCd;
         int _jumpsLeft;
         float _moveCostAccum;
+        float _lastCostX;
         bool _wasGrounded;
 
         void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            _lastCostX = transform.position.x;
             _rb.freezeRotation = true;
             _rb.gravityScale = gravityScale;
             _rb.sleepMode = RigidbodySleepMode2D.NeverSleep;   // 停止中スリープ → 入力で起きない、を防ぐ
@@ -100,21 +104,18 @@ namespace L8000
         {
             if (Frozen) return;
 
-            if (Input.GetKeyDown(jumpKey)) { _buffer = jumpBuffer; Spend(); }
+            if (Input.GetKeyDown(jumpKey)) { _buffer = jumpBuffer; Spend(jumpCost); }
             if (DebugForceJump) { _buffer = jumpBuffer; DebugForceJump = false; }
 
-            // 左右を押している間は継続的に消費(「入力し続けている」ぶん)
-            bool moving = Input.GetKey(leftKey) || Input.GetKey(rightKey);
-            if (moving && DebugAutoWalk == 0)
+            // 横に動いた距離ぶん消費(「登る＝動く」がコスト)
+            float dx = Mathf.Abs(transform.position.x - _lastCostX);
+            if (DebugAutoWalk == 0 && dx < 3f)   // 3以上はテレポート扱いで無視
             {
-                _moveCostAccum += Time.deltaTime;
-                while (_moveCostAccum >= Mathf.Max(0.03f, moveCostInterval))
-                {
-                    _moveCostAccum -= Mathf.Max(0.03f, moveCostInterval);
-                    Spend();
-                }
+                _moveCostAccum += dx;
+                float step = Mathf.Max(0.05f, moveCostDistance);
+                while (_moveCostAccum >= step) { _moveCostAccum -= step; Spend(); }
             }
-            else _moveCostAccum = 0f;
+            _lastCostX = transform.position.x;
 
             _autoClimbCd = Mathf.Max(0f, _autoClimbCd - Time.deltaTime);
             if (DebugAutoClimb && _grounded && _autoClimbCd <= 0f)
@@ -124,9 +125,9 @@ namespace L8000
             }
         }
 
-        static void Spend()
+        static void Spend(int n = 1)
         {
-            if (GameState.Instance != null) GameState.Instance.Spend(1);
+            if (GameState.Instance != null) GameState.Instance.Spend(n);
         }
 
         void FixedUpdate()
