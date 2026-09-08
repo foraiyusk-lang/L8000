@@ -27,7 +27,7 @@ namespace L8000
 
         [Header("登り")]
         public float climbGrace = 7f;
-        public float climbVoidSpeed = 2.4f;
+        public float climbVoidSpeed = 1.0f;   // ジグザグ登り(端まで歩く)は ~1.5-2.5u/s。動いていれば振り切れる。止まると ~10秒で捕まる(-100・復帰可)。
 
         [Header("降り")]
         public float descentSpeed = 6.5f;

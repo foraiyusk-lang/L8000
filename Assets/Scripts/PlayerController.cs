@@ -58,6 +58,10 @@ namespace L8000
         public static int DebugAutoWalk;
         /// <summary>検証用: 1フレームだけジャンプ入力を発生させる(空中でも)。</summary>
         public static bool DebugForceJump;
+        /// <summary>検証用: ジグザグ登りを自動で行う(端まで歩く→跳ぶ→中央へ寄せて着地)。</summary>
+        public static bool DebugZigzag;
+        int _zzDir;          // 今歩いている方向(接地時に確定)
+        float _zzLaunch = 1.4f;
 
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
         public bool IsGrounded => _grounded;
@@ -108,6 +112,40 @@ namespace L8000
             {
                 _buffer = jumpBuffer;
                 _autoClimbCd = 0.35f;
+            }
+
+            if (DebugZigzag)
+            {
+                float x = transform.position.x;
+                if (_grounded)
+                {
+                    if (_zzDir == 0)
+                    {
+                        // 直上のいちばん近い行を探し、その near edge を越える側へ歩く
+                        int aboveSide = 0; float nearest = 999f;
+                        for (float dx = -4f; dx <= 4f; dx += 0.5f)
+                        {
+                            var hu = Physics2D.Raycast(transform.position + new Vector3(dx, 0.4f, 0f), Vector2.up, 6f, groundMask);
+                            var lu = hu.collider != null ? hu.collider.GetComponent<CreditLineBuilder>() : null;
+                            if (lu != null && lu.Spec != null && lu.Spec.StaggerSide != 0 && hu.distance < nearest)
+                            { nearest = hu.distance; aboveSide = lu.Spec.StaggerSide; }
+                        }
+                        _zzDir = aboveSide != 0 ? -aboveSide : (x >= 0f ? 1 : -1);
+                    }
+                    DebugAutoWalk = _zzDir;
+                    if (_zzDir * x >= _zzLaunch)
+                    {
+                        _buffer = jumpBuffer;
+                        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x * 0.2f, _rb.linearVelocity.y); // 勢いを殺す
+                    }
+                }
+                else
+                {
+                    // 上昇中は即座に中央へ寄せて、上の行の乗れる部分へ。落下中は無入力で着地。
+                    if (_rb.linearVelocity.y > 0.3f) DebugAutoWalk = x > 0.2f ? -1 : (x < -0.2f ? 1 : 0);
+                    else DebugAutoWalk = 0;
+                    _zzDir = 0;
+                }
             }
         }
 

@@ -834,6 +834,8 @@ namespace L8000.EditorTools
             flow.clockRoot = clockGo.transform;
             flow.clockPivot = clockPivotGo.transform;
 
+            stateGo.AddComponent<ColliderViz>();   // F1 で当たり判定を可視化(開発用)
+
             // 描画順: HUD / ノイズ / フラッシュ / トースト / 暗転
             vigGo.transform.SetSiblingIndex(1);       // クレジットより上、他の演出より下
             noiseGo.transform.SetSiblingIndex(2);

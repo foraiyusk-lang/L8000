@@ -14,6 +14,7 @@ namespace L8000
         public float WorldY;
         public bool HasCJK;   // 列幅(半角/全角)の切り替え用。行内に CJK があれば true。
         public bool Solid;    // 必須ゲート: 一方通行にせず、撃って穴を開けないと通れない。
+        public int StaggerSide;  // +1=右寄り / -1=左寄り / 0=中央(Rule・Title)。ジグザグ登り用。
 
         // 破壊された文字(seg 0 = Left/本文, seg 1 = Right)。行が streaming で出入りしても保持。
         public bool[] Dest0, Dest1;
@@ -145,6 +146,7 @@ namespace L8000
             float y = 0f;
             float pending = 0f;       // 未反映の空白/gap の合計
             bool firstLinePlaced = false;
+            int _climbIndex = 0;      // 下から数えた climbable 行の通し番号(左右交互の判定用)
 
             for (int i = raws.Count - 1; i >= 0; i--)
             {
@@ -170,6 +172,16 @@ namespace L8000
 
                 spec.WorldY = y;
                 if (!firstLinePlaced) { roll.BottomY = y; firstLinePlaced = true; }
+
+                // ジグザグ: 下(登り出し)から数えて climbable な行を左右交互に。
+                // Rule(全幅の床)と Title(頂上・接触で巻き戻し)は中央のまま。
+                if (spec.Kind == LineKind.Rule || spec.Kind == LineKind.Title)
+                    spec.StaggerSide = 0;
+                else
+                {
+                    spec.StaggerSide = (_climbIndex % 2 == 0) ? 1 : -1;
+                    _climbIndex++;
+                }
 
                 roll.Lines.Add(spec);
                 roll.TopY = spec.WorldY;

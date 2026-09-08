@@ -115,7 +115,9 @@ namespace L8000
             _isGate = spec.Solid && spec.Kind != LineKind.Rule;
             _gateOpened = false;
             _broken = false;
-            _oneWay = spec.Kind != LineKind.Rule;
+            // 足場は全部ソリッド(下からは抜けられない)。登りは端から。
+            // Title(頂上)だけは下から抜けられる = 触れると巻き戻しが発動する目印。
+            _oneWay = spec.Kind == LineKind.Title;
             _effector.enabled = _oneWay;
 
             float scale = spec.Kind == LineKind.Title ? _layout.titleScale
@@ -138,14 +140,16 @@ namespace L8000
             // 必須ゲートは琥珀色で「ここは撃って開ける」と分かるように
             Color gate = new Color(1f, 0.72f, 0.28f);
 
+            float sx = spec.StaggerSide * _layout.staggerX;   // この行の中心 X(左右交互)
+
             if (spec.Kind == LineKind.Rule)
             {
                 BuildRule();
             }
             else if (spec.Kind == LineKind.RoleName)
             {
-                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, -_layout.centerGap, 0);
-                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap, 1);
+                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, sx - _layout.centerGap, 0);
+                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, sx + _layout.centerGap, 1);
                 RebuildBars();
             }
             else
@@ -157,7 +161,7 @@ namespace L8000
                     LineKind.Free => _layout.dimColor,
                     _ => _layout.nameColor,
                 };
-                BuildSeg(Sanitize(spec.Left), color, scale, Align.Center, 0f);
+                BuildSeg(Sanitize(spec.Left), color, scale, Align.Center, sx);
                 RebuildBars();
             }
 
@@ -392,7 +396,7 @@ namespace L8000
 
             seg.originX = align switch
             {
-                Align.Center => -0.5f * (minX + maxX) * seg.k,
+                Align.Center => anchorX - 0.5f * (minX + maxX) * seg.k,
                 Align.LeftFrom => anchorX - minX * seg.k,
                 Align.RightTo => anchorX - maxX * seg.k,
                 _ => 0f,
@@ -491,6 +495,24 @@ namespace L8000
             {
                 for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
                 return;
+            }
+
+            // 足場の X 範囲は「文字の長さに関わらず固定幅」にする。
+            //  - 長い行 … 文字が足場からはみ出す(飾り)。全幅を塞がないので必ず端から登れる。
+            //  - 短い行 … 素の縁(見えない足場)ができる。突き出た端まで歩ける。
+            // Title は頂上の当たり判定用に広く。Rule はここを通らない(BuildRule)。
+            if (Spec != null && Spec.Kind != LineKind.Rule)
+            {
+                if (Spec.Kind == LineKind.Title)
+                {
+                    lineMin = -5.5f; lineMax = 5.5f;
+                }
+                else
+                {
+                    float c = Spec.StaggerSide * _layout.staggerX;
+                    float h = Mathf.Max(0.4f, _layout.ledgeHalfWidth);
+                    lineMin = c - h; lineMax = c + h;
+                }
             }
 
             // 穴(破壊された可視文字の X 範囲、少し広げる)。
