@@ -27,11 +27,13 @@ namespace L8000
             _bgm = gameObject.AddComponent<AudioSource>();
             _bgm.loop = true;
             _bgm.playOnAwake = false;
+            _bgm.spatialBlend = 0f;         // 2D。カメラが離れても音量が変わらない
             _bgm.volume = bgmVolume;
             _bgm.clip = Load("bgm") ?? ProcBgm();
 
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;
+            _sfx.spatialBlend = 0f;
             _sfx.volume = sfxVolume;
 
             _jump = Load("sfx_jump") ?? Blip(660, 990, 0.10f);
