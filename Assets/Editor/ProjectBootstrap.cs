@@ -236,6 +236,15 @@ namespace L8000.EditorTools
                 AssetDatabase.CreateAsset(layout, LayoutPath);
                 Log("created " + LayoutPath);
             }
+            // 新規追加フィールドが 0 のまま(古い .asset)だと足場が消えるので既定へ補正
+            bool fixedAny = false;
+            if (layout.charColliderWidthRatio <= 0f) { layout.charColliderWidthRatio = 1f; fixedAny = true; }
+            if (layout.maxLineGap <= 0f) { layout.maxLineGap = 2.6f; fixedAny = true; }
+            if (layout.minLineGap <= 0f) { layout.minLineGap = 1.3f; fixedAny = true; }
+            if (layout.gapUnit <= 0f) { layout.gapUnit = 0.6f; fixedAny = true; }
+            if (layout.cellHeight <= 0f) { layout.cellHeight = 1f; fixedAny = true; }
+            if (layout.colliderHeightRatio <= 0f) { layout.colliderHeightRatio = 0.9f; fixedAny = true; }
+            if (fixedAny) { EditorUtility.SetDirty(layout); AssetDatabase.SaveAssets(); Log("layout: 既定値を補正"); }
             return layout;
         }
 

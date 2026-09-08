@@ -227,8 +227,9 @@ namespace L8000
             var ti = seg.tmp.textInfo;
 
             seg.usedBoxes = 0;
-            float colliderH = _layout.cellHeight * _layout.colliderHeightRatio;
-            float wRatio = _layout.charColliderWidthRatio;
+            float chr = _layout.colliderHeightRatio > 0f ? _layout.colliderHeightRatio : 0.9f;
+            float colliderH = (_layout.cellHeight > 0f ? _layout.cellHeight : 1f) * chr;
+            float wRatio = _layout.charColliderWidthRatio > 0f ? _layout.charColliderWidthRatio : 1f;
 
             int n = Mathf.Min(ti.characterCount, seg.original.Length);
             for (int i = 0; i < n; i++)
