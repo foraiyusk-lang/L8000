@@ -17,7 +17,7 @@ import numpy as np
 import mido
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..")
-MID_DIR = os.path.join(_ROOT, "Assets", "Audio")
+MID_DIR = os.path.join(_ROOT, "scripts", "midi")
 WAV_DIR = os.path.join(_ROOT, "Assets", "Resources", "Audio")
 MID_PATH = os.path.join(MID_DIR, "bgm.mid")
 WAV_PATH = os.path.join(WAV_DIR, "bgm.wav")

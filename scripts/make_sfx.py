@@ -14,7 +14,7 @@ import numpy as np
 import mido
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..")
-MID_DIR = os.path.join(_ROOT, "Assets", "Audio")
+MID_DIR = os.path.join(_ROOT, "scripts", "midi")
 WAV_DIR = os.path.join(_ROOT, "Assets", "Resources", "Audio")
 SR = 44100
 BPM = 120

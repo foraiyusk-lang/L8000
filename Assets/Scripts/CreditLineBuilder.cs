@@ -45,6 +45,7 @@ namespace L8000
         bool _oneWay;
         bool _isGate;
         bool _gateOpened;
+        float _lineScale = 1f;      // Title/Header は拡大。当たり判定もこれに追従させる。
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
@@ -97,6 +98,12 @@ namespace L8000
             _gateOpened = false;
             _oneWay = spec.Kind != LineKind.Rule;
             _effector.enabled = _oneWay;
+
+            float scale = spec.Kind == LineKind.Title ? _layout.titleScale
+                        : spec.Kind == LineKind.Header ? _layout.headerScale
+                        : 1f;
+            _lineScale = scale;
+
             if (_gateBlock == null)
             {
                 _gateBlock = gameObject.AddComponent<BoxCollider2D>();
@@ -105,13 +112,9 @@ namespace L8000
             _gateBlock.enabled = _isGate;
             if (_isGate)
             {
-                _gateBlock.offset = new Vector2(0f, _layout.colliderYOffset);
+                _gateBlock.offset = new Vector2(0f, ColliderOffsetY());
                 _gateBlock.size = new Vector2(400f, Mathf.Max(0.1f, ColliderH()));
             }
-
-            float scale = spec.Kind == LineKind.Title ? _layout.titleScale
-                        : spec.Kind == LineKind.Header ? _layout.headerScale
-                        : 1f;
 
             // 必須ゲートは琥珀色で「ここは撃って開ける」と分かるように
             Color gate = new Color(1f, 0.72f, 0.28f);
@@ -165,7 +168,7 @@ namespace L8000
             float ly = world.y - transform.position.y;
 
             float colliderH = ColliderH();
-            if (Mathf.Abs(ly - _layout.colliderYOffset) > colliderH * 0.5f + 0.5f)
+            if (Mathf.Abs(ly - ColliderOffsetY()) > colliderH * 0.5f + 0.5f)
             {
                 if (DebugHitLog) Debug.Log($"[Hit] ly reject: ly={ly:0.00}");
                 return false;
@@ -231,11 +234,25 @@ namespace L8000
         // --- 内部 -------------------------------------------------------
         enum Align { Center, LeftFrom, RightTo }
 
-        float ColliderH()
+        /// <summary>この行の見た目の文字セル高(拡大込み)。</summary>
+        float LineCellH()
         {
             float cell = _layout.cellHeight > 0f ? _layout.cellHeight : 1f;
+            return cell * Mathf.Max(0.01f, _lineScale);
+        }
+
+        /// <summary>足場コライダの厚み。文字セル高に追従。</summary>
+        float ColliderH()
+        {
             float chr = _layout.colliderHeightRatio > 0f ? _layout.colliderHeightRatio : 0.9f;
-            return cell * chr;
+            return LineCellH() * chr;
+        }
+
+        /// <summary>足場コライダの縦オフセット。上端が文字の上端あたりに来る = 文字の上に立つ。</summary>
+        float ColliderOffsetY()
+        {
+            const float topFrac = 0.5f;   // 文字上端の目安(em ボックス中心からの比率)
+            return LineCellH() * topFrac - ColliderH() * 0.5f + _layout.colliderYOffset;
         }
 
         void BuildRule()
@@ -275,7 +292,7 @@ namespace L8000
             box.enabled = true;
             box.isTrigger = false;
             box.usedByEffector = false;   // Rule は完全ソリッド
-            box.offset = new Vector2(0f, _layout.colliderYOffset);
+            box.offset = new Vector2(0f, ColliderOffsetY());
             box.size = new Vector2(400f, Mathf.Max(0.1f, ColliderH()));
             EnsurePointFilter(_font);
         }
@@ -475,7 +492,7 @@ namespace L8000
             box.enabled = true;
             box.isTrigger = false;
             box.usedByEffector = _oneWay;
-            box.offset = new Vector2((left + right) * 0.5f, _layout.colliderYOffset);
+            box.offset = new Vector2((left + right) * 0.5f, ColliderOffsetY());
             box.size = new Vector2(right - left, Mathf.Max(0.1f, h));
         }
 

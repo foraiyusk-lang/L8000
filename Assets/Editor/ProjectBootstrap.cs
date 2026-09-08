@@ -566,7 +566,7 @@ namespace L8000.EditorTools
 
             var outline = new GameObject("Outline");
             outline.transform.SetParent(playerGo.transform, false);
-            outline.transform.localScale = new Vector3((PlayerW + 0.12f) / visSprite, (PlayerH + 0.12f) / visSprite, 1f);
+            outline.transform.localScale = new Vector3((PlayerW + 0.05f) / visSprite, (PlayerH + 0.05f) / visSprite, 1f);
             var osr = outline.AddComponent<SpriteRenderer>();
             osr.sprite = white;
             osr.color = Color.black;
@@ -578,9 +578,10 @@ namespace L8000.EditorTools
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
+            // 当たり判定は見た目とほぼ同寸(0.26 x 0.36)。角だけ僅かに丸める。
             var col = playerGo.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(PlayerW - 0.05f, PlayerH - 0.05f);
-            col.edgeRadius = 0.025f;
+            col.size = new Vector2(PlayerW - 0.04f, PlayerH - 0.04f);
+            col.edgeRadius = 0.02f;
             col.sharedMaterial = new PhysicsMaterial2D("PlayerLowFriction") { friction = 0.05f, bounciness = 0f };
 
             var pc = playerGo.AddComponent<PlayerController>();
