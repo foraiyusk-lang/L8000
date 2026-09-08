@@ -644,6 +644,49 @@ namespace L8000.EditorTools
             var hud = stateGo.AddComponent<Hud>();
             hud.label = label;
 
+            // --- 「無」(下からせり上がる黒) --------------------------
+            var voidGo = new GameObject("VoidRiser");
+            var voidSpriteGo = new GameObject("VoidSprite");
+            voidSpriteGo.transform.SetParent(voidGo.transform, false);
+            var voidSr = voidSpriteGo.AddComponent<SpriteRenderer>();
+            voidSr.sprite = white;
+            voidSr.color = Color.black;
+            voidSr.sortingOrder = 15;   // クレジット(1)とプレイヤー(10)より上
+            var voidRiser = voidGo.AddComponent<VoidRiser>();
+            voidRiser.player = playerGo.transform;
+            voidRiser.viewCamera = cam;
+
+            // --- 暗転 + 終幕ロール ----------------------------------
+            var blackoutGo = new GameObject("Blackout", typeof(RectTransform));
+            blackoutGo.transform.SetParent(canvasGo.transform, false);
+            var blackout = blackoutGo.AddComponent<UnityEngine.UI.Image>();
+            blackout.color = new Color(0f, 0f, 0f, 0f);
+            var brt = blackout.rectTransform;
+            brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
+            brt.offsetMin = Vector2.zero; brt.offsetMax = Vector2.zero;
+            blackoutGo.SetActive(false);
+
+            var endRollGo = new GameObject("EndRollText", typeof(RectTransform));
+            endRollGo.transform.SetParent(canvasGo.transform, false);
+            var endRoll = endRollGo.AddComponent<TMPro.TextMeshProUGUI>();
+            endRoll.font = font;
+            endRoll.fontSize = 26f;
+            endRoll.color = Color.white;
+            endRoll.alignment = TMPro.TextAlignmentOptions.Top;
+            endRoll.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+            var ert = endRoll.rectTransform;
+            ert.anchorMin = new Vector2(0.5f, 0.5f);
+            ert.anchorMax = new Vector2(0.5f, 0.5f);
+            ert.pivot = new Vector2(0.5f, 0f);
+            ert.sizeDelta = new Vector2(900f, 40f);
+            endRollGo.SetActive(false);
+
+            var endSeq = stateGo.AddComponent<EndSequence>();
+            endSeq.blackout = blackout;
+            endSeq.rollText = endRoll;
+            endSeq.streamer = streamer;
+            endSeq.hud = hud;
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);
