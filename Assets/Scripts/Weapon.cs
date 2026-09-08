@@ -39,6 +39,7 @@ namespace L8000
             {
                 if (wantFire && GameState.Instance != null) GameState.Instance.Spend(1);
                 Fire();
+                AudioManager.Play(Sfx.Shoot);
                 _cd = fireCooldown;
             }
         }

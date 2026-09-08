@@ -687,6 +687,24 @@ namespace L8000.EditorTools
             endSeq.streamer = streamer;
             endSeq.hud = hud;
 
+            // --- 音(手続き生成の最小 BGM / SE) --------------------
+            stateGo.AddComponent<AudioManager>();
+
+            // --- 破壊の副作用 --------------------------------------
+            var noiseGo = new GameObject("GraphicsNoise", typeof(RectTransform));
+            noiseGo.transform.SetParent(canvasGo.transform, false);
+            var noise = noiseGo.AddComponent<UnityEngine.UI.RawImage>();
+            var nrt = noise.rectTransform;
+            nrt.anchorMin = Vector2.zero; nrt.anchorMax = Vector2.one;
+            nrt.offsetMin = Vector2.zero; nrt.offsetMax = Vector2.zero;
+            noise.raycastTarget = false;
+            noise.enabled = false;
+            noiseGo.transform.SetSiblingIndex(1);   // クレジット表示より上、暗転より下
+
+            var sabotage = stateGo.AddComponent<SabotageDirector>();
+            sabotage.hud = hud;
+            sabotage.graphicsNoise = noise;
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);

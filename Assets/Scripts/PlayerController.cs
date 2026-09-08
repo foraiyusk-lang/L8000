@@ -66,6 +66,9 @@ namespace L8000
         /// <summary>残り回数が尽きて硬直中。入力を受け付けない。</summary>
         public bool Frozen { get; private set; }
 
+        /// <summary>Physics Programmer 破壊 → ジャンプが不安定に。</summary>
+        public static bool PhysicsAnomaly;
+
         Rigidbody2D _rb;
         bool _grounded;
         float _coyote;
@@ -73,6 +76,7 @@ namespace L8000
         float _autoClimbCd;
         int _jumpsLeft;
         float _moveCostAccum;
+        bool _wasGrounded;
 
         void Awake()
         {
@@ -133,6 +137,9 @@ namespace L8000
             Collider2D hit = Physics2D.OverlapBox(checkPos, groundCheckSize, 0f, groundMask);
             _grounded = hit != null && _rb.linearVelocity.y <= 0.1f;
 
+            if (_grounded && !_wasGrounded && _rb.linearVelocity.y < -1f) AudioManager.Play(Sfx.Land);
+            _wasGrounded = _grounded;
+
             _coyote = _grounded ? coyoteTime : Mathf.Max(0f, _coyote - dt);
             _buffer = Mathf.Max(0f, _buffer - dt);
             if (_grounded) _jumpsLeft = maxJumps;
@@ -160,14 +167,18 @@ namespace L8000
             bool canAirJump = !canGroundJump && _jumpsLeft > 0 && !_grounded;
             if (wantJump && (canGroundJump || canAirJump))
             {
-                vy = canAirJump ? jumpForce * airJumpMult : jumpForce;
+                float f = canAirJump ? jumpForce * airJumpMult : jumpForce;
+                if (PhysicsAnomaly) f *= Random.Range(0.55f, 1.4f);   // 不安定なジャンプ
+                vy = f;
                 _buffer = 0f;
                 _coyote = 0f;
                 _jumpsLeft = Mathf.Max(0, _jumpsLeft - 1);
+                AudioManager.Play(Sfx.Jump);
             }
 
+            float fallMul = PhysicsAnomaly ? fallGravityMult * 1.6f : fallGravityMult;
             float g = Physics2D.gravity.y * gravityScale;
-            if (vy < 0f) vy += g * (fallGravityMult - 1f) * dt;
+            if (vy < 0f) vy += g * (fallMul - 1f) * dt;
             else if (vy > 0f && !Input.GetKey(jumpKey)) vy += g * (lowJumpMult - 1f) * dt;
             vy = Mathf.Max(vy, -maxFallSpeed);
 

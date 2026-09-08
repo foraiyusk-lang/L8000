@@ -245,9 +245,23 @@ namespace L8000
             EnsurePointFilter(_font);
         }
 
+        /// <summary>Localization 破壊 → 以降に組まれる行を文字化けさせる。</summary>
+        public static bool Garble;
+        const string GarbleChars = "▓▒░#※§¤‡†◆■◇□×";
+
+        static string Mojibake(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            var a = s.ToCharArray();
+            for (int i = 0; i < a.Length; i++)
+                if (a[i] != ' ') a[i] = GarbleChars[Random.Range(0, GarbleChars.Length)];
+            return new string(a);
+        }
+
         void BuildSeg(string s, Color color, float scale, Align align, float anchorX)
         {
             if (string.IsNullOrEmpty(s)) return;
+            if (Garble) s = Mojibake(s);
 
             Seg seg = GetSeg();
             seg.original = s;
