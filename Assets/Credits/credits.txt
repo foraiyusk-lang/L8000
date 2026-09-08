@@ -185,19 +185,19 @@ Font :: x12y16pxMaruMonica (hicc)
 [gap 2]
 
 # Special Thanks
-会場で 足を止めてくれた あなた
-ここまで 一緒に来た 全員
+足を止めてくれた あなた
+ここまで 来た 全員
 眠らなかった 夜
 Tokyo Game Show
-そして、このエンディングを 最後まで 登りきる人へ
+最後まで 登りきる人へ
 
 [gap 2.5]
 
 # Legal
-~ 「残り8000回」は 架空のゲームです ~
-All names and studios in this staff roll are fictitious.
-Any resemblance to real credits is part of the joke.
-No credits were harmed in the making of this ending.
+~ 「残り8000回」は 架空です ~
+All names here are fictitious.
+Any resemblance is the joke.
+No credits were harmed.
 ~ ...まだ、ここまでは。 ~
 
 [gap 2]
