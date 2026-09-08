@@ -228,7 +228,8 @@ namespace L8000
             if (weapon != null) { weapon.CanFire = true; weapon.FireDown = true; }
             var cam = viewCamera.transform.position; cam.y = streamer.BottomY + 2.5f; viewCamera.transform.position = cam;
             ScreenFx.Banner(null, Color.white);
-            ScreenFx.Toast("この線に 触れている ―  ↓Enter で 下へ", new Color(0.85f, 0.9f, 1f), 4f);
+            ScreenFx.Toast("↓ Enter で この線を 抜ける", new Color(0.85f, 0.9f, 1f), 4f);
+            ScreenFx.Banner("↓ Enter", new Color(0.7f, 0.76f, 0.88f, 1f));
         }
 
         void TickBottom()

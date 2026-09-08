@@ -60,10 +60,21 @@ def main():
             if m[x, y] > 120:
                 px[x, y] = ink
 
-    # 摩耗: 端のブロックをいくつか欠けさせる(弾で削れた跡)
-    blocks = [(x, y) for y in range(0, H, SCALE) for x in range(0, W, SCALE)
-              if m[min(x + 1, W - 1), min(y + 1, H - 1)] > 120]
-    for (bx, by) in rng.sample(blocks, k=max(3, len(blocks) // 22)):
+    # 摩耗: 「縁」のブロック(隣に空きがある)だけ、ごく僅かに欠けさせる。
+    def filled(x, y):
+        return 0 <= x < W and 0 <= y < H and m[x, y] > 120
+
+    edge_blocks = []
+    for by in range(0, H, SCALE):
+        for bx in range(0, W, SCALE):
+            cx, cy = min(bx + 1, W - 1), min(by + 1, H - 1)
+            if not filled(cx, cy):
+                continue
+            # 上下左右いずれかが空 = 縁
+            if not (filled(cx, cy - SCALE) and filled(cx, cy + SCALE)
+                    and filled(cx - SCALE, cy) and filled(cx + SCALE, cy)):
+                edge_blocks.append((bx, by))
+    for (bx, by) in rng.sample(edge_blocks, k=max(2, len(edge_blocks) // 30)):
         for y in range(by, min(by + SCALE, H)):
             for x in range(bx, min(bx + SCALE, W)):
                 px[x, y] = (0, 0, 0, 0)
