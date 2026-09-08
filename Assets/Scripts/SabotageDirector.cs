@@ -49,27 +49,30 @@ namespace L8000
 
         void OnDestroyed(CreditLineBuilder line, string chars)
         {
-            if (line == null || line.Spec == null) return;
+            if (line == null || line.Spec == null || line.IsGate) return;   // ゲートは機能破壊しない
             string role = (line.Spec.Left ?? "").Trim();
             string r = role.ToLowerInvariant();
 
-            if (r.Contains("music") || r.Contains("composer")) Fire("bgm", () => AudioManager.Instance?.StopBgm());
-            if (r.Contains("sound director")) Fire("sfx", () => AudioManager.Instance?.KillSfx());
-            if (r.Contains("physics programmer")) Fire("physics", () => PlayerController.PhysicsAnomaly = true);
-            if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", ShowNoise);
-            if (r.Contains("localization")) Fire("garble", () => CreditLineBuilder.Garble = true);
-            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", () => hud?.Kill());
-            if (role == "Producer") Fire("producer", () =>
+            if (r.Contains("music") || r.Contains("composer")) Fire("bgm", "BGM", () => AudioManager.Instance?.StopBgm());
+            if (r.Contains("sound director")) Fire("sfx", "効果音", () => AudioManager.Instance?.KillSfx());
+            if (r.Contains("physics programmer")) Fire("physics", "物理", () => PlayerController.PhysicsAnomaly = true);
+            if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", "描画", ShowNoise);
+            if (r.Contains("localization")) Fire("garble", "翻訳", () => CreditLineBuilder.Garble = true);
+            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", "UI", () => hud?.Kill());
+            if (role == "Producer") Fire("producer", "進行管理", () =>
             {
                 if (GameState.Instance != null) GameState.Instance.spendMultiplier = 1.5f;
             });
         }
 
-        void Fire(string key, System.Action effect)
+        void Fire(string key, string label, System.Action effect)
         {
             if (!_fired.Add(key)) return;
             effect?.Invoke();
-            Debug.Log($"[Sabotage] {key} 破壊");
+            AudioManager.Play(Sfx.Break);
+            ScreenFx.Toast($"― {label} 消失 ―", new Color(0.95f, 0.45f, 0.4f), 2.2f);
+            ScreenFx.Flash(new Color(0.6f, 0.05f, 0.05f, 0.32f), 0.5f);
+            Debug.Log($"[Sabotage] {key}");
         }
 
         void ShowNoise()

@@ -42,6 +42,8 @@ namespace L8000
         Rigidbody2D _body;
         PlatformEffector2D _effector;
         bool _oneWay;
+        bool _isGate;
+        bool _gateOpened;
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
@@ -52,6 +54,11 @@ namespace L8000
 
         /// <summary>文字が破壊されたとき (行, 破壊された文字の連結). 機能無効化フックが購読する。</summary>
         public static System.Action<CreditLineBuilder, string> OnCharsDestroyed;
+
+        /// <summary>必須ゲートに人が通れる幅の穴が初めて開いたとき。</summary>
+        public static System.Action OnGateOpened;
+
+        public bool IsGate => _isGate;
 
         public void Init(GameLayout layout, TMP_FontAsset font, int groundLayer)
         {
@@ -83,13 +90,18 @@ namespace L8000
             transform.position = new Vector3(0f, spec.WorldY, 0f);
             gameObject.name = $"Line[{spec.Kind}] y{spec.WorldY:0.0}";
 
-            // Rule(=====)は完全ソリッドなゲート。それ以外は下からすり抜けられる一方通行の足場。
-            _oneWay = spec.Kind != LineKind.Rule;
+            // Rule(=====)と必須ゲートは完全ソリッド。それ以外は下からすり抜けられる一方通行。
+            _isGate = spec.Solid && spec.Kind != LineKind.Rule;
+            _gateOpened = false;
+            _oneWay = spec.Kind != LineKind.Rule && !spec.Solid;
             _effector.enabled = _oneWay;
 
             float scale = spec.Kind == LineKind.Title ? _layout.titleScale
                         : spec.Kind == LineKind.Header ? _layout.headerScale
                         : 1f;
+
+            // 必須ゲートは琥珀色で「ここは撃って開ける」と分かるように
+            Color gate = new Color(1f, 0.72f, 0.28f);
 
             if (spec.Kind == LineKind.Rule)
             {
@@ -97,13 +109,13 @@ namespace L8000
             }
             else if (spec.Kind == LineKind.RoleName)
             {
-                BuildSeg(Sanitize(spec.Left), _layout.roleColor, scale, Align.RightTo, -_layout.centerGap);
-                BuildSeg(Sanitize(spec.Right), _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap);
+                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, -_layout.centerGap);
+                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap);
                 RebuildBars();
             }
             else
             {
-                Color color = spec.Kind switch
+                Color color = _isGate ? gate : spec.Kind switch
                 {
                     LineKind.Header => _layout.headerColor,
                     LineKind.Title => _layout.titleColor,
@@ -181,7 +193,15 @@ namespace L8000
 
             RenderSeg(s);
             RebuildBars();
+            AudioManager.Play(Sfx.Hit, 0.6f);
             OnCharsDestroyed?.Invoke(this, hit.ToString());
+
+            if (_isGate && !_gateOpened)
+            {
+                _gateOpened = true;
+                AudioManager.Play(Sfx.Gate);
+                OnGateOpened?.Invoke();
+            }
             return true;
         }
 
@@ -431,8 +451,9 @@ namespace L8000
 
         void EmitBar(float left, float right, float h)
         {
-            // プレイヤーが乗れない細片は足場にしない(弾で開けた穴まわりのゴミ対策)
-            if (right - left < 0.22f) return;
+            // プレイヤー幅(0.26)より狭い細片は足場にしない。
+            // 弾で開けた穴を細片が分断して通れなくなるのを防ぐ。
+            if (right - left < 0.4f) return;
             var box = GetBar();
             box.enabled = true;
             box.isTrigger = false;

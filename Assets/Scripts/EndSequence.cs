@@ -30,6 +30,7 @@ namespace L8000
         {
             if (_started) return;
             _started = true;
+            ScreenFx.Flash(new Color(1f, 1f, 1f, 0.7f), 0.5f);
             StartCoroutine(Run());
         }
 

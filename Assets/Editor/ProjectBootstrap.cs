@@ -715,6 +715,55 @@ namespace L8000.EditorTools
             outro.streamer = streamer;
             outro.voidRiser = voidRiser;
 
+            // --- 画面演出(トースト / フラッシュ) ------------------
+            var flashGo = new GameObject("Flash", typeof(RectTransform));
+            flashGo.transform.SetParent(canvasGo.transform, false);
+            var flashImg = flashGo.AddComponent<UnityEngine.UI.Image>();
+            flashImg.color = new Color(1f, 1f, 1f, 0f);
+            flashImg.raycastTarget = false;
+            var frt = flashImg.rectTransform;
+            frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
+            frt.offsetMin = Vector2.zero; frt.offsetMax = Vector2.zero;
+
+            var toastGo = new GameObject("Toast", typeof(RectTransform));
+            toastGo.transform.SetParent(canvasGo.transform, false);
+            var toast = toastGo.AddComponent<TMPro.TextMeshProUGUI>();
+            toast.font = font;
+            toast.fontSize = 40f;
+            toast.color = new Color(1f, 1f, 1f, 0f);
+            toast.alignment = TMPro.TextAlignmentOptions.Center;
+            toast.raycastTarget = false;
+            toast.fontStyle = TMPro.FontStyles.Bold;
+            var trt = toast.rectTransform;
+            trt.anchorMin = new Vector2(0.5f, 0.8f);
+            trt.anchorMax = new Vector2(0.5f, 0.8f);
+            trt.pivot = new Vector2(0.5f, 0.5f);
+            trt.sizeDelta = new Vector2(900f, 60f);
+
+            var screenFx = stateGo.AddComponent<ScreenFx>();
+            screenFx.flash = flashImg;
+            screenFx.toast = toast;
+
+            // 描画順: HUD / ノイズ / フラッシュ / 暗転 / トースト / 終幕ロール
+            noiseGo.transform.SetSiblingIndex(1);
+            flashGo.transform.SetAsLastSibling();
+            blackoutGo.transform.SetAsLastSibling();
+            toastGo.transform.SetAsLastSibling();
+            endRollGo.transform.SetAsLastSibling();
+
+            // --- 射撃チュートリアルのヒント(スタート地点) --------
+            var hintGo = new GameObject("StartHint", typeof(TextMeshPro));
+            var hint = hintGo.GetComponent<TextMeshPro>();
+            hint.font = font;
+            hint.fontSize = 5f;
+            hint.color = new Color(1f, 0.72f, 0.28f, 0.9f);
+            hint.alignment = TMPro.TextAlignmentOptions.Center;
+            hint.text = "Enter : 撃つ  ―  琥珀色の行は撃って穴を開ける";
+            hint.sortingOrder = 12;
+            hintGo.transform.position = new Vector3(0f, 1.1f, 0f);
+            var sh = hintGo.AddComponent<StartHint>();
+            sh.player = playerGo.transform;
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);

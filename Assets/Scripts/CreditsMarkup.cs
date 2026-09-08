@@ -13,6 +13,7 @@ namespace L8000
         public string Right;  // RoleName の名前。それ以外は null。
         public float WorldY;
         public bool HasCJK;   // 列幅(半角/全角)の切り替え用。行内に CJK があれば true。
+        public bool Solid;    // 必須ゲート: 一方通行にせず、撃って穴を開けないと通れない。
     }
 
     public class CreditsRoll
@@ -163,7 +164,17 @@ namespace L8000
                 roll.TopY = spec.WorldY;
             }
 
-            roll.Lines.Reverse(); // WorldY 昇順(下→上)に整える
+            roll.Lines.Reverse(); // Lines は WorldY 降順(先頭=タイトル、末尾=最下部)
+
+            // 必須ゲート: 下端(登り出し)から数えて最初の数本(Rule 以外)をソリッドに。
+            // 撃って穴を開けないと通れない = 射撃を教えるチュートリアル。
+            int gates = Mathf.Max(0, layout.gateLineCount);
+            for (int i = roll.Lines.Count - 1; i >= 0 && gates > 0; i--)
+            {
+                if (roll.Lines[i].Kind == LineKind.Rule) continue;
+                roll.Lines[i].Solid = true;
+                gates--;
+            }
             return roll;
         }
     }

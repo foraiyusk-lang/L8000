@@ -1,0 +1,74 @@
+using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace L8000
+{
+    /// <summary>
+    /// 画面演出のハブ: 中央のトースト文字 と 全画面フラッシュ。
+    /// 破壊の副作用・必須ゲート・戻り演出から静的に呼ぶ。
+    /// </summary>
+    public class ScreenFx : MonoBehaviour
+    {
+        public static ScreenFx Instance { get; private set; }
+
+        public TextMeshProUGUI toast;
+        public Image flash;
+
+        Coroutine _toastCo, _flashCo;
+
+        void Awake()
+        {
+            Instance = this;
+            if (toast != null) { var c = toast.color; c.a = 0f; toast.color = c; }
+            if (flash != null) { var c = flash.color; c.a = 0f; flash.color = c; flash.gameObject.SetActive(true); }
+        }
+
+        void OnDestroy() { if (Instance == this) Instance = null; }
+
+        public static void Toast(string msg, Color color, float hold = 1.8f)
+        {
+            var s = Instance;
+            if (s == null || s.toast == null) return;
+            if (s._toastCo != null) s.StopCoroutine(s._toastCo);
+            s._toastCo = s.StartCoroutine(s.ToastCo(msg, color, hold));
+        }
+
+        IEnumerator ToastCo(string msg, Color color, float hold)
+        {
+            toast.text = msg;
+            float t = 0f;
+            while (t < 0.25f) { t += Time.deltaTime; SetToastA(color, t / 0.25f); yield return null; }
+            SetToastA(color, 1f);
+            yield return new WaitForSeconds(hold);
+            t = 0f;
+            while (t < 0.6f) { t += Time.deltaTime; SetToastA(color, 1f - t / 0.6f); yield return null; }
+            SetToastA(color, 0f);
+        }
+
+        void SetToastA(Color c, float a) { c.a = Mathf.Clamp01(a); toast.color = c; }
+
+        public static void Flash(Color color, float dur = 0.35f)
+        {
+            var s = Instance;
+            if (s == null || s.flash == null) return;
+            if (s._flashCo != null) s.StopCoroutine(s._flashCo);
+            s._flashCo = s.StartCoroutine(s.FlashCo(color, dur));
+        }
+
+        IEnumerator FlashCo(Color color, float dur)
+        {
+            float peak = color.a <= 0f ? 0.5f : color.a;
+            float t = 0f;
+            var rise = Mathf.Min(0.06f, dur * 0.3f);
+            while (t < rise) { t += Time.deltaTime; SetFlashA(color, Mathf.Lerp(0f, peak, t / rise)); yield return null; }
+            t = 0f;
+            float fall = Mathf.Max(0.01f, dur - rise);
+            while (t < fall) { t += Time.deltaTime; SetFlashA(color, Mathf.Lerp(peak, 0f, t / fall)); yield return null; }
+            SetFlashA(color, 0f);
+        }
+
+        void SetFlashA(Color c, float a) { c.a = Mathf.Clamp01(a); flash.color = c; }
+    }
+}

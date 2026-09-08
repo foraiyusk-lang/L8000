@@ -1,10 +1,12 @@
+using System.Collections;
 using UnityEngine;
 
 namespace L8000
 {
     /// <summary>
-    /// 頂上のタイトルに触れると発動。プレイヤーの操作を奪い、視点ごと上から下へ降りていく。
-    /// 下からは「無」が速くせり上がってきて、途中で合流 → VoidRiser が飲み込み → EndSequence。
+    /// 頂上のタイトルに触れると発動。操作を奪い、視点ごと上から下へ降りていく。
+    ///   ・降りながら「残り」を一気に使い切る(戻るのにも回数がかかる)
+    ///   ・下からは「無」が速くせり上がってきて途中で合流 → 飲み込み → EndSequence
     /// </summary>
     public class OutroSequence : MonoBehaviour
     {
@@ -19,11 +21,16 @@ namespace L8000
         public float titleTouchRadius = 1.5f;
 
         [Tooltip("降りる速さ(world units / 秒)。")]
-        public float descendSpeed = 6f;
+        public float descendSpeed = 7f;
+
+        [Tooltip("発動してから降り始めるまでの静止(頂上を見せる間)。")]
+        public float pauseAtTop = 1.4f;
 
         public bool Active { get; private set; }
 
         Rigidbody2D _rb;
+        bool _descending;
+        int _drainFrom;
 
         void Awake()
         {
@@ -33,14 +40,12 @@ namespace L8000
 
         void LateUpdate()
         {
-            if (Active) { Descend(); return; }
+            if (Active) { if (_descending) Descend(); return; }
             if (player == null || streamer == null || streamer.TopY <= 1f) return;
 
-            // タイトル行より上に到達 = 触れた
             if (player.position.y >= streamer.TopY) { Begin(); return; }
-
-            // タイトル行付近まで来たら発動(乗る・頭で触れる・かすめる)
             if (player.position.y < streamer.TopY - 4f) return;
+
             var hits = Physics2D.OverlapCircleAll(player.position, titleTouchRadius);
             foreach (var h in hits)
             {
@@ -59,14 +64,25 @@ namespace L8000
             if (_rb != null) { _rb.bodyType = RigidbodyType2D.Kinematic; _rb.linearVelocity = Vector2.zero; }
 
             EndSequence.ReachedTop = true;
+            _drainFrom = GameState.Instance != null ? GameState.Instance.Remaining : 0;
 
-            // 「無」を下から速くせり上がらせる(降りてくるプレイヤーと合流させる)
+            ScreenFx.Flash(new Color(1f, 1f, 1f, 0.85f), 0.6f);
+            ScreenFx.Toast("― 戻る ―", Color.white, 2.2f);
+
+            StartCoroutine(Run());
+        }
+
+        IEnumerator Run()
+        {
+            yield return new WaitForSeconds(pauseAtTop);
+            _descending = true;
+
             if (voidRiser != null)
             {
                 float bottom = streamer != null ? streamer.BottomY : 0f;
                 voidRiser.player = player;
-                voidRiser.startGapBelowPlayer = Mathf.Max(4f, player.position.y - bottom);
-                voidRiser.Trigger(descendSpeed * 1.9f);
+                voidRiser.startGapBelowPlayer = Mathf.Max(4f, (player != null ? player.position.y : 0f) - bottom);
+                voidRiser.Trigger(descendSpeed * 1.15f);
             }
         }
 
@@ -74,6 +90,7 @@ namespace L8000
         {
             float dt = Time.deltaTime;
             float bottom = streamer != null ? streamer.BottomY : 0f;
+            float top = streamer != null ? streamer.TopY : 1f;
 
             if (player != null)
             {
@@ -82,6 +99,16 @@ namespace L8000
                 p.x = Mathf.Lerp(p.x, 0f, 3f * dt);
                 player.position = p;
                 if (_rb != null) _rb.position = p;
+
+                // 降りた進捗ぶん「残り」を削る(降りるのにも回数を使う)。
+                // 降下の 55% 地点で 0 になるよう前倒し(無に合流する頃には使い切っている)。
+                if (GameState.Instance != null && !GameState.Instance.Depleted)
+                {
+                    float progress = Mathf.Clamp01(Mathf.InverseLerp(top, bottom, p.y) / 0.55f);
+                    int target = Mathf.RoundToInt(_drainFrom * (1f - progress));
+                    int cut = GameState.Instance.Remaining - Mathf.Max(0, target);
+                    if (cut > 0) GameState.Instance.Spend(cut);
+                }
             }
 
             if (viewCamera != null)

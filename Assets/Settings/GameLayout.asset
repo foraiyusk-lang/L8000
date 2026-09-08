@@ -36,3 +36,4 @@ MonoBehaviour:
   colliderYOffset: 0
   charColliderWidthRatio: 1
   centerChuteHalfWidth: 0
+  gateLineCount: 3
