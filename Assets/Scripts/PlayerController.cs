@@ -56,8 +56,15 @@ namespace L8000
         /// <summary>検証用: 1フレームだけジャンプ入力を発生させる(空中でも)。</summary>
         public static bool DebugForceJump;
 
+        [Header("残り回数(入力コスト)")]
+        [Tooltip("左右キーを押し続けている間、この秒数ごとに残り回数を1消費する。")]
+        public float moveCostInterval = 0.15f;
+
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
         public bool IsGrounded => _grounded;
+
+        /// <summary>残り回数が尽きて硬直中。入力を受け付けない。</summary>
+        public bool Frozen { get; private set; }
 
         Rigidbody2D _rb;
         bool _grounded;
@@ -65,6 +72,7 @@ namespace L8000
         float _buffer;
         float _autoClimbCd;
         int _jumpsLeft;
+        float _moveCostAccum;
 
         void Awake()
         {
@@ -79,10 +87,30 @@ namespace L8000
             }
         }
 
+        void OnEnable() => GameState.OnDepleted += Freeze;
+        void OnDisable() => GameState.OnDepleted -= Freeze;
+
+        void Freeze() => Frozen = true;
+
         void Update()
         {
-            if (Input.GetKeyDown(jumpKey)) _buffer = jumpBuffer;
+            if (Frozen) return;
+
+            if (Input.GetKeyDown(jumpKey)) { _buffer = jumpBuffer; Spend(); }
             if (DebugForceJump) { _buffer = jumpBuffer; DebugForceJump = false; }
+
+            // 左右を押している間は継続的に消費(「入力し続けている」ぶん)
+            bool moving = Input.GetKey(leftKey) || Input.GetKey(rightKey);
+            if (moving && DebugAutoWalk == 0)
+            {
+                _moveCostAccum += Time.deltaTime;
+                while (_moveCostAccum >= Mathf.Max(0.03f, moveCostInterval))
+                {
+                    _moveCostAccum -= Mathf.Max(0.03f, moveCostInterval);
+                    Spend();
+                }
+            }
+            else _moveCostAccum = 0f;
 
             _autoClimbCd = Mathf.Max(0f, _autoClimbCd - Time.deltaTime);
             if (DebugAutoClimb && _grounded && _autoClimbCd <= 0f)
@@ -90,6 +118,11 @@ namespace L8000
                 _buffer = jumpBuffer;
                 _autoClimbCd = 0.35f;
             }
+        }
+
+        static void Spend()
+        {
+            if (GameState.Instance != null) GameState.Instance.Spend(1);
         }
 
         void FixedUpdate()
@@ -103,6 +136,14 @@ namespace L8000
             _coyote = _grounded ? coyoteTime : Mathf.Max(0f, _coyote - dt);
             _buffer = Mathf.Max(0f, _buffer - dt);
             if (_grounded) _jumpsLeft = maxJumps;
+
+            // 硬直中: 入力を止め、その場で自然に減速させる(重力はそのまま)
+            if (Frozen)
+            {
+                float vxs = Mathf.MoveTowards(_rb.linearVelocity.x, 0f, groundDecel * dt);
+                _rb.linearVelocity = new Vector2(vxs, Mathf.Max(_rb.linearVelocity.y, -maxFallSpeed));
+                return;
+            }
 
             // --- 横移動: 入力中は accel、離したら decel でピタッと ---
             float dir = (Input.GetKey(rightKey) ? 1f : 0f) - (Input.GetKey(leftKey) ? 1f : 0f);

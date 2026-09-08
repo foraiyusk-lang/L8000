@@ -25,12 +25,19 @@ namespace L8000
 
         float _cd;
         readonly Stack<Bullet> _pool = new Stack<Bullet>();
+        PlayerController _pc;
+
+        void Awake() => _pc = GetComponent<PlayerController>();
 
         void Update()
         {
             _cd = Mathf.Max(0f, _cd - Time.deltaTime);
-            if (_cd <= 0f && (Input.GetKeyDown(fireKey) || DebugAutoFire))
+            if (_pc != null && _pc.Frozen) return;
+
+            bool wantFire = Input.GetKeyDown(fireKey);
+            if (_cd <= 0f && (wantFire || DebugAutoFire))
             {
+                if (wantFire && GameState.Instance != null) GameState.Instance.Spend(1);
                 Fire();
                 _cd = fireCooldown;
             }

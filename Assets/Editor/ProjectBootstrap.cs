@@ -612,6 +612,38 @@ namespace L8000.EditorTools
             follow.roll = streamer;
             follow.pixelsPerUnit = 16f;
 
+            // --- ゲーム状態 (残り回数) --------------------------------
+            var stateGo = new GameObject("GameState");
+            var state = stateGo.AddComponent<GameState>();
+            state.startingActions = 8000;
+
+            // --- HUD (残り回数表示) ----------------------------------
+            var canvasGo = new GameObject("HUD Canvas", typeof(RectTransform));
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(960, 540);
+            canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+            var labelGo = new GameObject("RemainingLabel", typeof(RectTransform));
+            labelGo.transform.SetParent(canvasGo.transform, false);
+            var label = labelGo.AddComponent<TMPro.TextMeshProUGUI>();
+            label.font = font;
+            label.fontSize = 34f;
+            label.color = new Color(0.85f, 0.9f, 1f);
+            label.alignment = TMPro.TextAlignmentOptions.TopLeft;
+            label.text = "残り 8000";
+            var lrt = label.rectTransform;
+            lrt.anchorMin = new Vector2(0f, 1f);
+            lrt.anchorMax = new Vector2(0f, 1f);
+            lrt.pivot = new Vector2(0f, 1f);
+            lrt.anchoredPosition = new Vector2(24f, -18f);
+            lrt.sizeDelta = new Vector2(420f, 60f);
+
+            var hud = stateGo.AddComponent<Hud>();
+            hud.label = label;
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);
