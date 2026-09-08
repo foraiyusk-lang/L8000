@@ -24,6 +24,7 @@ namespace L8000
 
         class Seg
         {
+            public int idx;               // 0 = Left/本文, 1 = Right(RoleName)
             public string original = "";
             public bool[] destroyed;
             public float[] baseX0, baseX1;   // 各文字の line 空間 X 範囲(破壊されても不変)
@@ -59,6 +60,23 @@ namespace L8000
 
         /// <summary>必須ゲートに人が通れる幅の穴が初めて開いたとき。</summary>
         public static System.Action OnGateOpened;
+
+        /// <summary>降り演出中: 一度でも文字を壊された行は当たり判定を全て消す(斜線＝素通り)。</summary>
+        public static bool DescentDropDestroyed;
+
+        /// <summary>下向き射撃(最下部の ===== 突破など)で行の当たり判定を全消し。</summary>
+        /// <summary>最下部の ===== が下向き射撃で突破されたとき。</summary>
+        public static System.Action OnBottomBroken;
+
+        public void BreakOpen()
+        {
+            for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
+            if (_gateBlock != null) _gateBlock.enabled = false;
+            _broken = true;
+            AudioManager.Play(Sfx.Gate);
+            if (Spec != null && Spec.Kind == LineKind.Rule) OnBottomBroken?.Invoke();
+        }
+        bool _broken;
 
         public bool IsGate => _isGate;
 
@@ -96,6 +114,7 @@ namespace L8000
             // 必須ゲートは「一方通行の足場 ＋ 撃つまで塞ぐ壁(_gateBlock)」。撃つと壁を外す。
             _isGate = spec.Solid && spec.Kind != LineKind.Rule;
             _gateOpened = false;
+            _broken = false;
             _oneWay = spec.Kind != LineKind.Rule;
             _effector.enabled = _oneWay;
 
@@ -125,8 +144,8 @@ namespace L8000
             }
             else if (spec.Kind == LineKind.RoleName)
             {
-                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, -_layout.centerGap);
-                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap);
+                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, -_layout.centerGap, 0);
+                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap, 1);
                 RebuildBars();
             }
             else
@@ -227,6 +246,7 @@ namespace L8000
         {
             if (s.destroyed[i]) return;
             s.destroyed[i] = true;
+            Spec?.MarkDestroyed(s.idx, i, s.destroyed.Length);   // streaming で出入りしても保持
             TotalCharsDestroyed++;
             if (i < s.original.Length) acc.Append(s.original[i]);
         }
@@ -310,18 +330,25 @@ namespace L8000
             return new string(a);
         }
 
-        void BuildSeg(string s, Color color, float scale, Align align, float anchorX)
+        void BuildSeg(string s, Color color, float scale, Align align, float anchorX, int segIdx = 0)
         {
             if (string.IsNullOrEmpty(s)) return;
             if (Garble) s = Mojibake(s);
 
             Seg seg = GetSeg();
+            seg.idx = segIdx;
             seg.original = s;
             seg.destroyed = new bool[s.Length];
             seg.baseX0 = new float[s.Length];
             seg.baseX1 = new float[s.Length];
             seg.chVis = new bool[s.Length];
             seg.isRule = false;
+
+            // streaming で出入りしても破壊済みなら復元
+            var saved = Spec != null ? (segIdx == 0 ? Spec.Dest0 : Spec.Dest1) : null;
+            if (saved != null)
+                for (int i = 0; i < s.Length && i < saved.Length; i++)
+                    seg.destroyed[i] = saved[i];
 
             var tmp = seg.tmp;
             tmp.gameObject.SetActive(true);
@@ -395,6 +422,19 @@ namespace L8000
         void RenderSeg(Seg seg)
         {
             if (seg.baseX0 == null) return;
+
+            // 降り演出中: 破壊済みの行は「取り消し線」で全文字を見せる(消えた名前が読める)
+            if (DescentDropDestroyed && Spec != null && Spec.AnyDestroyed)
+            {
+                var rtd = seg.tmp.rectTransform;
+                rtd.localScale = Vector3.one * seg.k;
+                rtd.localPosition = new Vector3(seg.originX, 0f, 0f);
+                seg.tmp.text = $"<s>{ComposeMspace(seg.original.ToCharArray())}</s>";
+                seg.tmp.color = new Color(seg.tmp.color.r, seg.tmp.color.g, seg.tmp.color.b, 0.4f);
+                seg.tmp.ForceMeshUpdate();
+                return;
+            }
+
             var chars = seg.original.ToCharArray();
             for (int i = 0; i < chars.Length; i++)
                 if (seg.destroyed[i]) chars[i] = ' ';
@@ -481,6 +521,10 @@ namespace L8000
             if (cursor < lineMax) EmitBar(cursor, lineMax, colliderH);
 
             for (int b = _usedBars; b < _bars.Count; b++) _bars[b].enabled = false;
+
+            // 降り演出中: 壊された行は素通り(斜線表現)
+            if (_broken || (DescentDropDestroyed && Spec != null && Spec.AnyDestroyed))
+                for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
         }
 
         void EmitBar(float left, float right, float h)

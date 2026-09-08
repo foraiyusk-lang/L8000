@@ -3,9 +3,9 @@ using UnityEngine;
 namespace L8000
 {
     /// <summary>
-    /// カメラはプレイヤーを追って上へ登る。プレイヤーがロールの一定割合(既定=中央)まで
-    /// 登ると「自動で上へ流れる(下から迫る)」が始まる。それまでは時間制限なし。
-    /// カメラ Y は下がらない(単調増加)。左右は追従しない。ロール頂上でクランプ。
+    /// カメラはプレイヤーを追う。左右は固定、Y だけ滑らかに追従(単調増加)。
+    /// ロール境界でクランプ。自動スクロールは廃止(時間圧は「無」に一本化)。
+    /// 降り演出中は GameFlow が enabled=false にして直接カメラを動かす。
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class CameraFollow : MonoBehaviour
@@ -13,31 +13,15 @@ namespace L8000
         public Transform target;
         public RollStreamer roll;
 
-        [Header("ズーム")]
-        [Tooltip(">0 なら Awake で camera.orthographicSize をこの値にする。大きいほど文字が小さく見える。")]
+        [Tooltip(">0 なら Awake で camera.orthographicSize をこの値にする。")]
         public float orthoSize = 10f;
 
-        [Header("自動スクロール(下から迫る)")]
-        [Tooltip("プレイヤーがロール全高のこの割合まで登ると自動スクロール開始。0.67=2/3地点。")]
-        [Range(0f, 1f)] public float scrollStartFraction = 0.67f;
+        [Tooltip("プレイヤーを画面のどれくらい下寄りに置くか(0.5=中央, 0.35=やや下)。")]
+        [Range(0.2f, 0.6f)] public float playerScreenFrac = 0.42f;
 
-        [Tooltip("上へ流れる速さ(world units/秒)。開始後のみ。")]
-        public float autoScrollSpeed = 0.55f;
-
-        [Tooltip("開始条件を満たしてからこの秒数待ってスクロール開始。")]
-        public float startDelay = 0.6f;
-
-        [Tooltip("プレイヤーを画面下端からこの距離より下には行かせない(取り残され防止)。")]
-        public float keepPlayerAbove = 2f;
-
-        [Tooltip("true にすると最初からスクロール(デバッグ用)。")]
-        public bool autoStart = false;
-
-        [Header("プレイヤー追従")]
-        [Tooltip("プレイヤーがこの分だけ画面中央より上に行ったらカメラも追う。")]
-        public float followAheadOffset = 1.2f;
-        public float followSmooth = 0.12f;
+        public float followSmooth = 0.14f;
         public float fixedX = 0f;
+        public bool monotonicUp = true;   // 登り中はカメラを下げない
 
         [Header("クランプ")]
         public float bottomPadding = 1.2f;
@@ -48,13 +32,8 @@ namespace L8000
         public float pixelsPerUnit = 16f;
 
         Camera _cam;
-        float _scrollY;
         float _y;
         float _vel;
-        bool _started;
-        float _sinceStart;
-
-        public bool Started => _started;
 
         void Awake()
         {
@@ -66,65 +45,29 @@ namespace L8000
                 if (p != null) target = p.transform;
             }
             _y = transform.position.y;
-            _scrollY = _y;
-            // 古いシーンで未設定(0)のまま来た場合の保険。即開始したいときは autoStart を使う。
-            if (scrollStartFraction < 0.02f) scrollStartFraction = 0.5f;
-            if (autoStart) BeginScroll();
-        }
-
-        public void BeginScroll()
-        {
-            if (_started) return;
-            _started = true;
-            _sinceStart = 0f;
         }
 
         void LateUpdate()
         {
-            // 中央まで登ったら自動スクロール開始
-            if (!_started && target != null && roll != null && roll.TopY > 1f
-                && target.position.y >= roll.TopY * scrollStartFraction)
-                BeginScroll();
-
-            if (_started)
-            {
-                _sinceStart += Time.deltaTime;
-                if (_sinceStart > startDelay && autoScrollSpeed > 0f)
-                    _scrollY += autoScrollSpeed * Time.deltaTime;
-            }
-
+            if (target == null) return;
             float halfH = _cam.orthographicSize;
 
-            // プレイヤーが遅れているときは自動スクロールも頭打ちにする。
-            // (_scrollY だけ先に走ると、追いついた瞬間にカメラがワープする)
-            if (target != null)
-            {
-                float scrollCap = target.position.y + halfH - keepPlayerAbove;
-                if (_scrollY > scrollCap) _scrollY = scrollCap;
-            }
+            // プレイヤーを画面の playerScreenFrac の高さに置く
+            float desired = target.position.y + halfH * (1f - 2f * playerScreenFrac);
 
-            float desired = _scrollY;
-            if (target != null)
-            {
-                float followY = target.position.y - followAheadOffset;
-                if (followY > desired) desired = followY;
-                float minToKeepPlayer = target.position.y + halfH - keepPlayerAbove;
-                if (desired > minToKeepPlayer) desired = minToKeepPlayer;
-            }
-
-            if (_cam.orthographic && roll != null)
+            if (roll != null && _cam.orthographic)
             {
                 float minCenter = roll.BottomY - bottomPadding + halfH;
                 float maxCenter = roll.TopY + topPadding - halfH;
                 if (maxCenter < minCenter) maxCenter = minCenter;
                 desired = Mathf.Clamp(desired, minCenter, maxCenter);
-                _scrollY = Mathf.Clamp(_scrollY, minCenter, maxCenter);
             }
+
+            if (monotonicUp && desired < _y) desired = Mathf.Lerp(_y, desired, 0.15f); // 落下時だけ少しだけ下げる
 
             _y = Mathf.SmoothDamp(_y, desired, ref _vel, followSmooth);
 
-            float x = fixedX;
-            float y = _y;
+            float x = fixedX, y = _y;
             if (pixelSnap && pixelsPerUnit > 0f)
             {
                 y = Mathf.Round(y * pixelsPerUnit) / pixelsPerUnit;
@@ -132,8 +75,5 @@ namespace L8000
             }
             transform.position = new Vector3(x, y, transform.position.z);
         }
-
-        /// <summary>いま画面に映っている一番下の world Y。</summary>
-        public float ViewBottomY => _y - (_cam != null ? _cam.orthographicSize : 0f);
     }
 }

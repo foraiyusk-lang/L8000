@@ -36,8 +36,8 @@ namespace L8000
             // ドメインリロードを切っている検証時に前回の static が残らないよう明示リセット
             CreditLineBuilder.TotalCharsDestroyed = 0;
             CreditLineBuilder.Garble = false;
+            CreditLineBuilder.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
-            EndSequence.ReachedTop = false;
         }
 
         void Start() => OnChanged?.Invoke(Remaining);

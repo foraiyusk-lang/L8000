@@ -53,10 +53,13 @@ namespace L8000
             }
         }
 
-        public void Launch(Vector2 velocity, float maxRange)
+        bool _down;
+
+        public void Launch(Vector2 velocity, float maxRange, bool down = false)
         {
             _startY = transform.position.y;
             _maxRange = maxRange;
+            _down = down;
             _rb.linearVelocity = velocity;
             _live = true;
             _lastLine = null;
@@ -64,7 +67,7 @@ namespace L8000
 
         void Update()
         {
-            if (_live && transform.position.y - _startY > _maxRange) Despawn();
+            if (_live && Mathf.Abs(transform.position.y - _startY) > _maxRange) Despawn();
         }
 
         CreditLineBuilder _lastLine;
@@ -75,8 +78,9 @@ namespace L8000
             var line = other.GetComponentInParent<CreditLineBuilder>();
             if (line == null || line == _lastLine) return;
             _lastLine = line;
-            line.HitAt(transform.position);
-            Despawn();   // 1発 = 1行だけ。貫通しない(狙って撃つ)
+            if (_down) line.BreakOpen();      // 下向き: 行の当たり判定を全消し(===== 突破)
+            else line.HitAt(transform.position);
+            Despawn();   // 1発 = 1行だけ。貫通しない
         }
 
         void Despawn()

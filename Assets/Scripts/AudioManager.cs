@@ -17,6 +17,7 @@ namespace L8000
 
         AudioSource _bgm;
         AudioSource _sfx;
+        AudioClip _bgmFwd, _bgmRev;
         AudioClip _jump, _shoot, _land, _hit, _break, _gate;
         bool _sfxKilled;
 
@@ -24,12 +25,15 @@ namespace L8000
         {
             Instance = this;
 
+            _bgmFwd = Load("bgm") ?? ProcBgm();
+            _bgmRev = Load("bgm_rev") ?? _bgmFwd;
+
             _bgm = gameObject.AddComponent<AudioSource>();
             _bgm.loop = true;
             _bgm.playOnAwake = false;
             _bgm.spatialBlend = 0f;         // 2D。カメラが離れても音量が変わらない
             _bgm.volume = bgmVolume;
-            _bgm.clip = Load("bgm") ?? ProcBgm();
+            _bgm.clip = _bgmFwd;
 
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;
@@ -44,7 +48,69 @@ namespace L8000
             _gate = Load("sfx_gate") ?? Blip(500, 800, 0.3f);
         }
 
-        void Start() { if (_bgm.clip != null) _bgm.Play(); }
+        bool _reversed;
+        Coroutine _xfadeCo;
+
+        void Start()
+        {
+            SetReversed(_reversed, instant: true);
+        }
+
+        /// <summary>登り中は逆再生 wav、降り中は順再生 wav。負ピッチは使わない(ストリーミングで不安定)。</summary>
+        public void SetReversed(bool rev, bool instant = false)
+        {
+            _reversed = rev;
+            if (_bgm == null) return;
+            var want = rev ? _bgmRev : _bgmFwd;
+            if (_bgm.clip == want && _bgm.isPlaying) return;
+            _bgm.clip = want;
+            _bgm.pitch = 1f;
+            _bgm.volume = bgmVolume;
+            _bgm.Play();
+        }
+
+        /// <summary>逆再生 → 一瞬スローになって止まる → 順再生(「巻き戻しが止まる」)。</summary>
+        public void CrossfadeToForward(float dur)
+        {
+            if (_xfadeCo != null) StopCoroutine(_xfadeCo);
+            _xfadeCo = StartCoroutine(RewindStop(dur));
+        }
+
+        System.Collections.IEnumerator RewindStop(float dur)
+        {
+            // 逆再生をスロー＋フェードアウト(時間が止まっていく)
+            float half = dur * 0.55f, e = 0f;
+            float v0 = _bgm.volume, p0 = _bgm.pitch;
+            while (e < half && _bgm != null)
+            {
+                e += Time.unscaledDeltaTime;
+                float k = e / half;
+                _bgm.pitch = Mathf.Lerp(p0, 0.05f, k);
+                _bgm.volume = Mathf.Lerp(v0, 0f, k);
+                yield return null;
+            }
+            if (_bgm == null) yield break;
+            _bgm.Stop();
+            yield return new WaitForSecondsRealtime(0.25f);
+
+            // 順再生を低ピッチから立ち上げる(時間が また 進みだす)
+            _reversed = false;
+            _bgm.clip = _bgmFwd;
+            _bgm.pitch = 0.4f;
+            _bgm.volume = 0f;
+            _bgm.Play();
+            e = 0f;
+            float rise = dur * 0.45f;
+            while (e < rise && _bgm != null)
+            {
+                e += Time.unscaledDeltaTime;
+                float k = e / rise;
+                _bgm.pitch = Mathf.Lerp(0.4f, 1f, k);
+                _bgm.volume = Mathf.Lerp(0f, bgmVolume, k);
+                yield return null;
+            }
+            if (_bgm != null) { _bgm.pitch = 1f; _bgm.volume = bgmVolume; }
+        }
 
         static AudioClip Load(string name) => Resources.Load<AudioClip>("Audio/" + name);
 

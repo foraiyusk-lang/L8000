@@ -82,6 +82,14 @@ namespace L8000
             }
         }
 
+        /// <summary>実体化済みの行を全て組み直す(降り演出で当たり判定ルールが変わったとき等)。</summary>
+        public void RefreshAll()
+        {
+            if (_roll == null || _live == null) return;
+            for (int i = 0; i < _live.Length; i++)
+                if (_live[i] != null) _live[i].Configure(_roll.Lines[i]);
+        }
+
         /// <summary>指定 Y 範囲の行を今すぐ(予算無視で)実体化する。スポーン直後の落下抜けを防ぐため。</summary>
         public void SpawnImmediate(float minY, float maxY)
         {

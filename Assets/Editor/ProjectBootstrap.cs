@@ -182,12 +182,12 @@ namespace L8000.EditorTools
                     if (t - _capLastLog > 1.0)
                     {
                         _capLastLog = t;
-                        Log($"mid t{t:0.0}s: started={(follow != null && follow.Started)} camY={(cam != null ? cam.transform.position.y : 0):0.0} (中央=~{topY * 0.5f:0.0})");
+                        Log($"mid t{t:0.0}s: camY={(cam != null ? cam.transform.position.y : 0):0.0} (中央=~{topY * 0.5f:0.0})");
                     }
                 }
                 else
                 {
-                    Log($"stage0 done. started={(follow != null && follow.Started)}");
+                    Log($"stage0 done.");
                     _capStage = 1; _capPhaseFrame = 0;
                 }
                 if (_capPhaseFrame == 120) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_walk.png");
@@ -646,19 +646,32 @@ namespace L8000.EditorTools
             var hud = stateGo.AddComponent<Hud>();
             hud.label = label;
 
-            // --- 「無」(下からせり上がる黒) --------------------------
+            // --- 「無」(登り=下から / 降り=上から せり寄る黒) -------
             var voidGo = new GameObject("VoidRiser");
-            var voidSpriteGo = new GameObject("VoidSprite");
-            voidSpriteGo.transform.SetParent(voidGo.transform, false);
-            var voidSr = voidSpriteGo.AddComponent<SpriteRenderer>();
-            voidSr.sprite = white;
-            voidSr.color = Color.black;
-            voidSr.sortingOrder = 15;   // クレジット(1)とプレイヤー(10)より上
+            var voidFillGo = new GameObject("Fill");
+            voidFillGo.transform.SetParent(voidGo.transform, false);
+            var voidFill = voidFillGo.AddComponent<SpriteRenderer>();
+            voidFill.sprite = white; voidFill.color = Color.black; voidFill.sortingOrder = 15;
+            var voidEdgeGo = new GameObject("Edge");
+            voidEdgeGo.transform.SetParent(voidGo.transform, false);
+            var voidEdge = voidEdgeGo.AddComponent<SpriteRenderer>();
+            voidEdge.sprite = white; voidEdge.color = new Color(0.55f, 0.55f, 0.62f, 0.9f); voidEdge.sortingOrder = 16;
             var voidRiser = voidGo.AddComponent<VoidRiser>();
             voidRiser.player = playerGo.transform;
             voidRiser.viewCamera = cam;
+            voidRiser.streamer = streamer;
 
-            // --- 暗転 + 終幕ロール ----------------------------------
+            // --- 時計の針(巻き戻しが止まる演出) --------------------
+            var clockGo = new GameObject("ClockPivot");
+            clockGo.transform.position = new Vector3(0f, 0f, 0f);   // GameFlow が実行時にカメラ前へ
+            var clockRingGo = new GameObject("Ring");
+            clockRingGo.transform.SetParent(clockGo.transform, false);
+            var clockRing = clockRingGo.AddComponent<SpriteRenderer>();
+            clockRing.sprite = white; clockRing.color = new Color(1f, 1f, 1f, 0.5f); clockRing.sortingOrder = 40;
+            clockRingGo.transform.localScale = new Vector3(0.06f, 0.9f, 1f);   // 縦棒 = 針
+            clockGo.SetActive(false);
+
+            // --- 暗転 + 終幕(PLAYED BY / 名前) --------------------
             var blackoutGo = new GameObject("Blackout", typeof(RectTransform));
             blackoutGo.transform.SetParent(canvasGo.transform, false);
             var blackout = blackoutGo.AddComponent<UnityEngine.UI.Image>();
@@ -668,28 +681,17 @@ namespace L8000.EditorTools
             brt.offsetMin = Vector2.zero; brt.offsetMax = Vector2.zero;
             blackoutGo.SetActive(false);
 
-            var endRollGo = new GameObject("EndRollText", typeof(RectTransform));
-            endRollGo.transform.SetParent(canvasGo.transform, false);
-            var endRoll = endRollGo.AddComponent<TMPro.TextMeshProUGUI>();
-            endRoll.font = font;
-            endRoll.fontSize = 26f;
-            endRoll.color = Color.white;
-            endRoll.alignment = TMPro.TextAlignmentOptions.Top;
-            endRoll.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
-            var ert = endRoll.rectTransform;
-            ert.anchorMin = new Vector2(0.5f, 0.5f);
-            ert.anchorMax = new Vector2(0.5f, 0.5f);
-            ert.pivot = new Vector2(0.5f, 0f);
-            ert.sizeDelta = new Vector2(900f, 40f);
-            endRollGo.SetActive(false);
+            var finaleTextGo = new GameObject("FinaleText", typeof(TextMeshPro));
+            var finaleText = finaleTextGo.GetComponent<TextMeshPro>();
+            finaleText.font = font;
+            finaleText.fontSize = 12f;
+            finaleText.color = Color.white;
+            finaleText.alignment = TMPro.TextAlignmentOptions.Center;
+            finaleText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+            finaleText.sortingOrder = 45;
+            finaleTextGo.SetActive(false);
 
-            var endSeq = stateGo.AddComponent<EndSequence>();
-            endSeq.blackout = blackout;
-            endSeq.rollText = endRoll;
-            endSeq.streamer = streamer;
-            endSeq.hud = hud;
-
-            // --- 音(手続き生成の最小 BGM / SE) --------------------
+            // --- 音 ---------------------------------------------------
             stateGo.AddComponent<AudioManager>();
 
             // --- 破壊の副作用 --------------------------------------
@@ -701,20 +703,10 @@ namespace L8000.EditorTools
             nrt.offsetMin = Vector2.zero; nrt.offsetMax = Vector2.zero;
             noise.raycastTarget = false;
             noise.enabled = false;
-            noiseGo.transform.SetSiblingIndex(1);   // クレジット表示より上、暗転より下
 
             var sabotage = stateGo.AddComponent<SabotageDirector>();
             sabotage.hud = hud;
             sabotage.graphicsNoise = noise;
-
-            // --- アウトロ(頂上タイトル接触 → 降下 → 無と合流) ----
-            var outro = stateGo.AddComponent<OutroSequence>();
-            outro.player = playerGo.transform;
-            outro.playerController = pc;
-            outro.cameraFollow = follow;
-            outro.viewCamera = cam;
-            outro.streamer = streamer;
-            outro.voidRiser = voidRiser;
 
             // --- 画面演出(トースト / フラッシュ) ------------------
             var flashGo = new GameObject("Flash", typeof(RectTransform));
@@ -745,12 +737,32 @@ namespace L8000.EditorTools
             screenFx.flash = flashImg;
             screenFx.toast = toast;
 
-            // 描画順: HUD / ノイズ / フラッシュ / 暗転 / トースト / 終幕ロール
+            // --- 終幕 -----------------------------------------------
+            var finaleC = stateGo.AddComponent<Finale>();
+            finaleC.blackout = blackout;
+            finaleC.worldText = finaleText;
+            finaleC.player = playerGo.transform;
+            finaleC.viewCamera = cam;
+            finaleC.streamer = streamer;
+            finaleC.hud = hud;
+
+            // --- 進行(登り→巻き戻し→降り→最下部→終幕) ----------
+            var flow = stateGo.AddComponent<GameFlow>();
+            flow.player = playerGo.transform;
+            flow.playerController = pc;
+            flow.weapon = weapon;
+            flow.cameraFollow = follow;
+            flow.viewCamera = cam;
+            flow.streamer = streamer;
+            flow.voidRiser = voidRiser;
+            flow.finale = finaleC;
+            flow.clockPivot = clockGo.transform;
+
+            // 描画順: HUD / ノイズ / フラッシュ / トースト / 暗転
             noiseGo.transform.SetSiblingIndex(1);
             flashGo.transform.SetAsLastSibling();
-            blackoutGo.transform.SetAsLastSibling();
             toastGo.transform.SetAsLastSibling();
-            endRollGo.transform.SetAsLastSibling();
+            blackoutGo.transform.SetAsLastSibling();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);

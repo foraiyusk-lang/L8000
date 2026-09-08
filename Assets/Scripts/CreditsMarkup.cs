@@ -14,6 +14,17 @@ namespace L8000
         public float WorldY;
         public bool HasCJK;   // 列幅(半角/全角)の切り替え用。行内に CJK があれば true。
         public bool Solid;    // 必須ゲート: 一方通行にせず、撃って穴を開けないと通れない。
+
+        // 破壊された文字(seg 0 = Left/本文, seg 1 = Right)。行が streaming で出入りしても保持。
+        public bool[] Dest0, Dest1;
+        public bool AnyDestroyed;
+
+        public void MarkDestroyed(int seg, int i, int len)
+        {
+            ref bool[] arr = ref (seg == 0 ? ref Dest0 : ref Dest1);
+            if (arr == null || arr.Length < len) System.Array.Resize(ref arr, len);
+            if (i >= 0 && i < arr.Length) { arr[i] = true; AnyDestroyed = true; }
+        }
     }
 
     public class CreditsRoll

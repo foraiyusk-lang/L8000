@@ -25,6 +25,11 @@ namespace L8000
         /// <summary>検証用: true の間、自動で撃ち続ける。</summary>
         public static bool DebugAutoFire;
 
+        /// <summary>撃てるか(降り演出中は false)。</summary>
+        public bool CanFire = true;
+        /// <summary>true なら下向きに撃つ(最下部の ===== 突破用)。</summary>
+        public bool FireDown;
+
         float _cd;
         readonly Stack<Bullet> _pool = new Stack<Bullet>();
         PlayerController _pc;
@@ -35,6 +40,7 @@ namespace L8000
         {
             _cd = Mathf.Max(0f, _cd - Time.deltaTime);
             if (_pc != null && _pc.Frozen) return;
+            if (!CanFire) return;
 
             bool wantFire = Input.GetKeyDown(fireKey);
             if (_cd <= 0f && (wantFire || DebugAutoFire))
@@ -49,8 +55,9 @@ namespace L8000
         public void Fire()
         {
             var b = Rent();
-            b.transform.position = transform.position + new Vector3(0f, muzzleOffsetY, 0f);
-            b.Launch(new Vector2(0f, bulletSpeed), bulletMaxRange);
+            float dir = FireDown ? -1f : 1f;
+            b.transform.position = transform.position + new Vector3(0f, dir * muzzleOffsetY, 0f);
+            b.Launch(new Vector2(0f, dir * bulletSpeed), bulletMaxRange, FireDown);
         }
 
         Bullet Rent()
