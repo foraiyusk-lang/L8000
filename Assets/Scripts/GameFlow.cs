@@ -185,7 +185,13 @@ namespace L8000
             TileField.DescentDropDestroyed = true;
             streamer.RefreshAll();   // 斜線(取り消し線)の行は当たり判定を落とす
 
-            if (_prb != null) { _prb.bodyType = RigidbodyType2D.Dynamic; _prb.linearVelocity = Vector2.zero; }
+            // 頂上のタイルから中央の隙間へ落とす(=降り出し)
+            if (_prb != null)
+            {
+                _prb.bodyType = RigidbodyType2D.Dynamic;
+                var p = player.position; p.x = 0f; p.y -= 1.5f; player.position = p; _prb.position = p;
+                _prb.linearVelocity = new Vector2(0f, -4f);
+            }
             if (playerController != null) playerController.enabled = true;
             if (weapon != null) weapon.CanFire = false;   // 降り中は射撃不可
 
@@ -200,12 +206,12 @@ namespace L8000
             float dt = Time.deltaTime;
             var p = player.position;
 
-            // カメラはプレイヤーを追って下がる
+            // カメラはプレイヤーを追って下がる(落下が速いので強めに追従)
             var c = viewCamera.transform.position;
-            c.y = Mathf.Lerp(c.y, p.y + 1.0f, 6f * dt);
+            c.y = Mathf.Lerp(c.y, p.y + 1.5f, 12f * dt);
             viewCamera.transform.position = c;
 
-            if (p.y <= streamer.BottomY + 1.3f) BeginBottom();
+            if (p.y <= streamer.BottomY + 3.0f) BeginBottom();   // 最下部付近(===== や @行 に着地)まで来たら
         }
 
         // --- Bottom (===== 突破) ---------------------------------------

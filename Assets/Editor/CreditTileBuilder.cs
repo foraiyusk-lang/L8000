@@ -90,11 +90,18 @@ namespace L8000.EditorTools
                     foreach (var w in SplitWords(spec.Left)) units.Add((w, false));
                 }
 
-                // 既定レイアウト: その行を中央そろえで左→右に並べる(あとで手で動かす)
-                float gap = 0.55f * scale;
+                // 既定レイアウト: 行を左右交互の「列」に置く(中央に隙間を残し、斜めジャンプで登れる形)。
+                // side +1 … いちばん左のタイルの左端を +centerGap に(右の列)
+                // side -1 … いちばん右のタイルの右端を -centerGap に(左の列)
+                // side  0 … 中央そろえ(Rule / Title / @行)
+                // ここは「たたき台」。ユーザーがシーンビューで各タイルを自由に動かして詰める。
+                float gap = 0.35f * scale;
                 var widths = units.Select(u => EstWidth(u.s) * scale).ToArray();
-                float total = widths.Sum() + gap * Mathf.Max(0, units.Count - 1);
-                float cx = -total * 0.5f;
+                float lineW = widths.Sum() + gap * Mathf.Max(0, units.Count - 1);
+                float inset = layout != null ? layout.centerGap : 0.4f;
+                float cx = spec.StaggerSide > 0 ? inset
+                         : spec.StaggerSide < 0 ? -inset - lineW
+                         : -lineW * 0.5f;
                 for (int i = 0; i < units.Count; i++)
                 {
                     float w = widths[i];
