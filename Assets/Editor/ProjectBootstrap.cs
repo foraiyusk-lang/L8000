@@ -871,8 +871,8 @@ namespace L8000.EditorTools
             // フレーバー
             var flavGo = new GameObject("Flavor", typeof(TextMeshPro));
             var flav = flavGo.GetComponent<TextMeshPro>();
-            flav.font = font; flav.fontSize = 3.6f; flav.alignment = TMPro.TextAlignmentOptions.Center;
-            flav.color = new Color(0.5f, 0.55f, 0.66f);
+            flav.font = font; flav.fontSize = 3.9f; flav.alignment = TMPro.TextAlignmentOptions.Center;
+            flav.color = new Color(0.62f, 0.67f, 0.78f);
             flav.text = "エンドロールの いちばん下から。";
             flavGo.transform.position = new Vector3(0f, 1.35f, 0f);
             ts.flavor = flav;
