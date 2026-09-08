@@ -140,16 +140,16 @@ namespace L8000
             // 必須ゲートは琥珀色で「ここは撃って開ける」と分かるように
             Color gate = new Color(1f, 0.72f, 0.28f);
 
-            float sx = spec.StaggerSide * _layout.staggerX;   // この行の中心 X(左右交互)
-
             if (spec.Kind == LineKind.Rule)
             {
                 BuildRule();
             }
             else if (spec.Kind == LineKind.RoleName)
             {
-                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, sx - _layout.centerGap, 0);
-                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, sx + _layout.centerGap, 1);
+                // まず分割点 0 を挟んで組み、そのあと行全体を左右の列へ寄せる。
+                BuildSeg(Sanitize(spec.Left), _isGate ? gate : _layout.roleColor, scale, Align.RightTo, -_layout.centerGap, 0);
+                BuildSeg(Sanitize(spec.Right), _isGate ? gate : _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap, 1);
+                AnchorLine(spec.StaggerSide);
                 RebuildBars();
             }
             else
@@ -161,7 +161,8 @@ namespace L8000
                     LineKind.Free => _layout.dimColor,
                     _ => _layout.nameColor,
                 };
-                BuildSeg(Sanitize(spec.Left), color, scale, Align.Center, sx);
+                BuildSeg(Sanitize(spec.Left), color, scale, Align.Center, 0f);
+                AnchorLine(spec.StaggerSide);
                 RebuildBars();
             }
 
@@ -422,6 +423,45 @@ namespace L8000
             RenderSeg(seg);
         }
 
+        /// <summary>
+        /// 行全体を左右の「列」へ寄せる。
+        ///   side +1 … いちばん左の可視文字を +centerGap に(＝右の列。内側の端が中央寄り)
+        ///   side -1 … いちばん右の可視文字を -centerGap に(＝左の列)
+        ///   side  0 … 中央そろえ(Title / @行 など)
+        /// 当たり判定は「可視文字の範囲そのまま」なので、寄せた分だけ baseX0/baseX1 もずらす。
+        /// これでプレイヤーは必ず「中央付近の内側の端」からジャンプでき、行の長さに依らず登れる。
+        /// </summary>
+        void AnchorLine(int side)
+        {
+            float mn = float.MaxValue, mx = float.MinValue;
+            for (int si = 0; si < _usedSegs; si++)
+            {
+                var s = _segs[si];
+                if (s.baseX0 == null) continue;
+                for (int i = 0; i < s.baseX0.Length; i++)
+                {
+                    if (!s.chVis[i]) continue;
+                    if (s.baseX0[i] < mn) mn = s.baseX0[i];
+                    if (s.baseX1[i] > mx) mx = s.baseX1[i];
+                }
+            }
+            if (mn == float.MaxValue) return;
+
+            float g = _layout.centerGap;
+            float shift = side > 0 ? (g - mn)
+                        : side < 0 ? (-g - mx)
+                        : (-(mn + mx) * 0.5f);
+
+            for (int si = 0; si < _usedSegs; si++)
+            {
+                var s = _segs[si];
+                s.originX += shift;
+                if (s.baseX0 != null)
+                    for (int i = 0; i < s.baseX0.Length; i++) { s.baseX0[i] += shift; s.baseX1[i] += shift; }
+                RenderSeg(s);
+            }
+        }
+
         /// <summary>破壊された文字を空白に置換して描画。位置・スケールは不変。コライダは触らない。</summary>
         void RenderSeg(Seg seg)
         {
@@ -496,24 +536,8 @@ namespace L8000
                 for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
                 return;
             }
-
-            // 足場の X 範囲は「文字の長さに関わらず固定幅」にする。
-            //  - 長い行 … 文字が足場からはみ出す(飾り)。全幅を塞がないので必ず端から登れる。
-            //  - 短い行 … 素の縁(見えない足場)ができる。突き出た端まで歩ける。
-            // Title は頂上の当たり判定用に広く。Rule はここを通らない(BuildRule)。
-            if (Spec != null && Spec.Kind != LineKind.Rule)
-            {
-                if (Spec.Kind == LineKind.Title)
-                {
-                    lineMin = -5.5f; lineMax = 5.5f;
-                }
-                else
-                {
-                    float c = Spec.StaggerSide * _layout.staggerX;
-                    float h = Mathf.Max(0.4f, _layout.ledgeHalfWidth);
-                    lineMin = c - h; lineMax = c + h;
-                }
-            }
+            // 当たり判定 = 可視文字の範囲そのまま(AnchorLine で列へ寄せ済み)。
+            // 描画されている文字にはすべて足場がある。見えない縁も、はみ出す文字も無い。
 
             // 穴(破壊された可視文字の X 範囲、少し広げる)。
             // ゲートは撃つと一方通行の「完全な」足場になる(穴はあくまで見た目) → 穴を掘らない。

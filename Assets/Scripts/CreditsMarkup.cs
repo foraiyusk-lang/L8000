@@ -14,7 +14,8 @@ namespace L8000
         public float WorldY;
         public bool HasCJK;   // 列幅(半角/全角)の切り替え用。行内に CJK があれば true。
         public bool Solid;    // 必須ゲート: 一方通行にせず、撃って穴を開けないと通れない。
-        public int StaggerSide;  // +1=右寄り / -1=左寄り / 0=中央(Rule・Title)。ジグザグ登り用。
+        public int StaggerSide;  // +1=右寄り / -1=左寄り / 0=中央(Rule・Title・@行)。ジグザグ登り用。
+        public bool CenterOverride;  // @行: 左右にずらさず中央に置く。
 
         // 破壊された文字(seg 0 = Left/本文, seg 1 = Right)。行が streaming で出入りしても保持。
         public bool[] Dest0, Dest1;
@@ -99,8 +100,9 @@ namespace L8000
                 }
                 else if (trimmed.StartsWith("@"))
                 {
-                    spec.Kind = LineKind.Name;    // @TEXT = 空白を詰めたい名前行など(装飾なし)
+                    spec.Kind = LineKind.Name;    // @TEXT = 中央に置く名前行(THANKYOUFORPLAYING など)
                     spec.Left = trimmed.Substring(1).Trim();
+                    spec.CenterOverride = true;
                 }
                 else if (trimmed.StartsWith("#"))
                 {
@@ -174,8 +176,8 @@ namespace L8000
                 if (!firstLinePlaced) { roll.BottomY = y; firstLinePlaced = true; }
 
                 // ジグザグ: 下(登り出し)から数えて climbable な行を左右交互に。
-                // Rule(全幅の床)と Title(頂上・接触で巻き戻し)は中央のまま。
-                if (spec.Kind == LineKind.Rule || spec.Kind == LineKind.Title)
+                // Rule(全幅の床)/ Title(頂上)/ @行 は中央のまま(交互カウントに含めない)。
+                if (spec.Kind == LineKind.Rule || spec.Kind == LineKind.Title || spec.CenterOverride)
                     spec.StaggerSide = 0;
                 else
                 {

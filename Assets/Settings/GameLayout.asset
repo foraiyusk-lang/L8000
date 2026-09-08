@@ -22,9 +22,7 @@ MonoBehaviour:
   maxLineGap: 1.85
   minLineGap: 1.5
   maxSectionGap: 2
-  centerGap: 0.3
-  staggerX: 1.4
-  ledgeHalfWidth: 2.6
+  centerGap: 0.4
   nameColor: {r: 1, g: 1, b: 1, a: 1}
   roleColor: {r: 0.72, g: 0.78, b: 0.9, a: 1}
   headerColor: {r: 0.55, g: 0.75, b: 1, a: 1}

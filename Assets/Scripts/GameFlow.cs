@@ -175,14 +175,19 @@ namespace L8000
         }
 
         // --- Descent -----------------------------------------------------
+        // 降り = 「戻っている」。当たり判定は登りと同じ(足場はソリッド)。
+        // プレイヤーは重力で落ち、中央の隙間を抜けて下へ。射撃は不可。上から無が迫る。
         void BeginDescent()
         {
             _phase = Phase.Descent;
             if (cameraFollow != null) cameraFollow.enabled = false;
-            if (_prb != null) { _prb.bodyType = RigidbodyType2D.Kinematic; _prb.linearVelocity = Vector2.zero; }
 
             CreditLineBuilder.DescentDropDestroyed = true;
-            streamer.RefreshAll();   // 既存の斜線行の当たり判定を落とす
+            streamer.RefreshAll();   // 斜線(取り消し線)の行は当たり判定を落とす
+
+            if (_prb != null) { _prb.bodyType = RigidbodyType2D.Dynamic; _prb.linearVelocity = Vector2.zero; }
+            if (playerController != null) playerController.enabled = true;
+            if (weapon != null) weapon.CanFire = false;   // 降り中は射撃不可
 
             voidRiser.Stop();
             voidRiser.Trigger(VoidMode.FallFromAbove, descentVoidSpeed);
@@ -194,18 +199,13 @@ namespace L8000
         {
             float dt = Time.deltaTime;
             var p = player.position;
-            float dir = (Input.GetKey(KeyCode.D) ? 1f : 0f) - (Input.GetKey(KeyCode.A) ? 1f : 0f);
-            p.x = Mathf.Clamp(p.x + dir * descentNudge * dt, -7f, 7f);
-            float target = streamer.BottomY + 0.9f;   // ===== の上でぴたっと止まる
-            p.y = Mathf.Max(target, p.y - descentSpeed * dt);
-            player.position = p;
-            if (_prb != null) _prb.position = p;
 
+            // カメラはプレイヤーを追って下がる
             var c = viewCamera.transform.position;
             c.y = Mathf.Lerp(c.y, p.y + 1.0f, 6f * dt);
             viewCamera.transform.position = c;
 
-            if (p.y <= target + 0.05f) BeginBottom();
+            if (p.y <= streamer.BottomY + 1.3f) BeginBottom();
         }
 
         // --- Bottom (===== 突破) ---------------------------------------

@@ -40,7 +40,7 @@ namespace L8000
         /// <summary>残り0で飲まれた → 終幕へ。</summary>
         public static System.Action OnFinalSwallow;
 
-        enum St { Idle, Advancing, Caught, Done }
+        enum St { Idle, Advancing, Swallowing, Caught, Done }
         St _st = St.Idle;
         float _resumeThreshold;
         float _settle;         // 再配置直後の猶予
@@ -105,6 +105,8 @@ namespace L8000
             float dt = Time.deltaTime;
             _settle = Mathf.Max(0f, _settle - dt);
 
+            if (_st == St.Swallowing) { LayoutSprite(); return; }   // 演出はコルーチン任せ
+
             if (_st == St.Advancing && _settle <= 0f)
             {
                 EdgeY += Dir * speed * dt;
@@ -141,22 +143,54 @@ namespace L8000
             }
 
             OnCaught?.Invoke(catchCost);
+            _st = St.Swallowing;
+            StartCoroutine(SwallowCo());
+        }
 
-            // 安全な足場(中央寄り)へ戻す
-            float safeBaseY = EdgeY + Dir * 3.0f;
-            Vector2 spot = FindSafeSpot(safeBaseY);
-            if (_prb != null)
+        /// <summary>
+        /// 飲み込まれた: 入力を止め、無がプレイヤーごと画面外まで上がって画面一杯が真っ暗に
+        /// なったら、元の位置の真ん中あたり(中央寄りの足場)へ戻す。1段進むと無が再開。
+        /// </summary>
+        System.Collections.IEnumerator SwallowCo()
+        {
+            var pcCtl = player.GetComponent<PlayerController>();
+            var wpn = player.GetComponentInChildren<Weapon>();
+            if (pcCtl != null) pcCtl.enabled = false;   // 操作入力を受けつけない
+            if (wpn != null) wpn.CanFire = false;
+            RigidbodyType2D restore = _prb != null ? _prb.bodyType : RigidbodyType2D.Dynamic;
+            if (_prb != null) { _prb.linearVelocity = Vector2.zero; _prb.bodyType = RigidbodyType2D.Kinematic; }
+
+            float caughtY = player.position.y;
+
+            // 無がプレイヤーを飲み込みつつ画面外まで上がる(画面一杯が真っ暗に)
+            float camY = viewCamera != null ? viewCamera.transform.position.y : caughtY;
+            float halfH = viewCamera != null ? viewCamera.orthographicSize : 10f;
+            float coverY = camY + Dir * (halfH + 3f);
+            float rush = Mathf.Max(speed, 9f);
+            while (Dir > 0 ? EdgeY < coverY : EdgeY > coverY)
             {
-                _prb.linearVelocity = Vector2.zero;
-                _prb.position = spot;
+                EdgeY += Dir * rush * Time.deltaTime;
+                LayoutSprite();
+                yield return null;
             }
+            yield return new WaitForSeconds(0.5f);   // 真っ暗を保つ
+
+            // 元の位置の真ん中あたりへ戻す(中央寄りの安全な足場)
+            Vector2 spot = FindSafeSpot(caughtY);
+            if (_prb != null) { _prb.linearVelocity = Vector2.zero; _prb.position = spot; }
             player.position = spot;
             Physics2D.SyncTransforms();
 
+            // 無を引かせ、1段進むまで待機
             _resumeThreshold = spot.y + Dir * advanceToResume;
-            EdgeY = spot.y - Dir * Mathf.Abs(startGap) * 0.7f;
+            EdgeY = spot.y - Dir * Mathf.Abs(startGap);
+            LayoutSprite();
             _st = St.Caught;
-            _settle = 0.4f;
+            _settle = 0.35f;
+
+            if (_prb != null) _prb.bodyType = restore;
+            if (pcCtl != null) pcCtl.enabled = true;   // 入力を戻す
+            if (wpn != null && Mode == VoidMode.RiseFromBelow) wpn.CanFire = true;   // 登り中のみ射撃可
         }
 
         /// <summary>safeBaseY 付近で、逃げる向きにある足場の上(または下)＝中央寄りの安全地点。</summary>

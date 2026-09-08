@@ -50,20 +50,11 @@ namespace L8000
                  "ジャンプ到達高(apex≈2.9)より必ず小さく、初心者でも越えられる 2.0。")]
         public float maxSectionGap = 2.0f;
 
-        [Header("役割 :: 名前 の2カラム")]
-        [Tooltip("役割と名前の間の内側の隙間(world units)。行の中心線から役割/名前をこれだけ離す。")]
-        public float centerGap = 0.3f;
-
-        [Header("ジグザグ登り(足場はソリッド・下からは抜けられない)")]
-        [Tooltip("各行を左右交互にこれだけずらす(world units)。プレイヤーは行の『中心を越えて突き出た端』" +
-                 "まで歩いて、空いている側からジャンプで上の行へ。0 にすると全部中央で従来どおり。")]
-        public float staggerX = 1.4f;
-
-        [Tooltip("ずらした行の足場の半幅(world units)。文字の長さに関わらず足場はこの固定幅にする" +
-                 "(長い行は文字が足場からはみ出す=飾り、短い行は素の縁ができる)。" +
-                 "これで『どの行も同じ幅の足場』になり、突き出た端から必ず登れる。" +
-                 "staggerX との差(この値 − staggerX)× 2 が1段あたりの左右移動量の目安。")]
-        public float ledgeHalfWidth = 2.6f;
+        [Header("ジグザグ登り(足場はソリッド・当たり判定=文字ぴったり)")]
+        [Tooltip("行を左右の列へ寄せる量(world units)。side+1 の行は『いちばん左の文字』を +centerGap に、" +
+                 "side-1 の行は『いちばん右の文字』を -centerGap に置く。左右の列の間に 2×centerGap の隙間ができ、" +
+                 "プレイヤーはその内側の端から斜めジャンプで上下の行へ。RoleName の役割/名前の内側の隙間も同値。")]
+        public float centerGap = 0.4f;
 
         [Header("色 / スケール")]
         public Color nameColor = Color.white;

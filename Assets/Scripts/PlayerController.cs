@@ -60,8 +60,7 @@ namespace L8000
         public static bool DebugForceJump;
         /// <summary>検証用: ジグザグ登りを自動で行う(端まで歩く→跳ぶ→中央へ寄せて着地)。</summary>
         public static bool DebugZigzag;
-        int _zzDir;          // 今歩いている方向(接地時に確定)
-        float _zzLaunch = 1.4f;
+        int _zzSide;         // 今乗っている行の side(接地時に確定、離地でクリア)
 
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
         public bool IsGrounded => _grounded;
@@ -116,35 +115,37 @@ namespace L8000
 
             if (DebugZigzag)
             {
+                // ジグザグ: 今の行の内側の端(中央寄り)まで歩く → 跳ぶ → 反対の列へ寄せて着地。
                 float x = transform.position.x;
                 if (_grounded)
                 {
-                    if (_zzDir == 0)
+                    var hd = Physics2D.Raycast(transform.position + Vector3.down * 0.2f, Vector2.down, 2f, groundMask);
+                    var ld = hd.collider != null ? hd.collider.GetComponent<CreditLineBuilder>() : null;
+                    int s = ld != null && ld.Spec != null ? ld.Spec.StaggerSide : 0;
+                    if (s == 0)   // 中央の行(Rule/@行): 上のいちばん近い行の逆側の列へ
                     {
-                        // 直上のいちばん近い行を探し、その near edge を越える側へ歩く
                         int aboveSide = 0; float nearest = 999f;
-                        for (float dx = -4f; dx <= 4f; dx += 0.5f)
+                        for (float dx = -6f; dx <= 6f; dx += 0.5f)
                         {
-                            var hu = Physics2D.Raycast(transform.position + new Vector3(dx, 0.4f, 0f), Vector2.up, 6f, groundMask);
+                            var hu = Physics2D.Raycast(transform.position + new Vector3(dx, 0.3f, 0f), Vector2.up, 6f, groundMask);
                             var lu = hu.collider != null ? hu.collider.GetComponent<CreditLineBuilder>() : null;
                             if (lu != null && lu.Spec != null && lu.Spec.StaggerSide != 0 && hu.distance < nearest)
                             { nearest = hu.distance; aboveSide = lu.Spec.StaggerSide; }
                         }
-                        _zzDir = aboveSide != 0 ? -aboveSide : (x >= 0f ? 1 : -1);
+                        s = aboveSide != 0 ? -aboveSide : 1;
                     }
-                    DebugAutoWalk = _zzDir;
-                    if (_zzDir * x >= _zzLaunch)
+                    _zzSide = s;
+                    DebugAutoWalk = -_zzSide;   // 内側の端(中央)へ歩く
+                    if (_zzSide * x <= 0.55f)   // 内側の端に着いた → 跳ぶ
                     {
                         _buffer = jumpBuffer;
-                        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x * 0.2f, _rb.linearVelocity.y); // 勢いを殺す
+                        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x * 0.1f, _rb.linearVelocity.y);
                     }
                 }
                 else
                 {
-                    // 上昇中は即座に中央へ寄せて、上の行の乗れる部分へ。落下中は無入力で着地。
-                    if (_rb.linearVelocity.y > 0.3f) DebugAutoWalk = x > 0.2f ? -1 : (x < -0.2f ? 1 : 0);
-                    else DebugAutoWalk = 0;
-                    _zzDir = 0;
+                    // 着地するまで反対の列へ横移動し続ける(上の行はその列で中央から外側へ伸びている)
+                    DebugAutoWalk = -_zzSide;
                 }
             }
         }
