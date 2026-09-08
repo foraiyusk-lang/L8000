@@ -39,6 +39,11 @@ namespace L8000
         /// <summary>検証用: true の間、接地するたびに自動でジャンプし続ける(登り続ける)。</summary>
         public static bool DebugAutoClimb;
 
+        /// <summary>検証用: -1/0/1 で左右入力を上書き。</summary>
+        public static int DebugAutoWalk;
+
+        public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
+
         Rigidbody2D _rb;
         bool _grounded;
         float _coyote;
@@ -52,6 +57,7 @@ namespace L8000
             _rb = GetComponent<Rigidbody2D>();
             _rb.freezeRotation = true;
             _rb.gravityScale = gravityScale;
+            _rb.sleepMode = RigidbodySleepMode2D.NeverSleep;   // 停止中にスリープ → 入力で起きない、を防ぐ
             if (groundMask.value == 0)
             {
                 int g = LayerMask.NameToLayer("Ground");
@@ -85,6 +91,7 @@ namespace L8000
             _buffer = Mathf.Max(0f, _buffer - dt);
 
             float dir = (Input.GetKey(rightKey) ? 1f : 0f) - (Input.GetKey(leftKey) ? 1f : 0f);
+            if (DebugAutoWalk != 0) dir = DebugAutoWalk;
             float targetX = dir * moveSpeed;
             float accel = _grounded ? groundAccel : airAccel;
             float vx = Mathf.MoveTowards(_rb.linearVelocity.x, targetX, accel * dt);

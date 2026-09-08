@@ -71,8 +71,7 @@ namespace L8000
             if (!_live) return;
             var line = other.GetComponentInParent<CreditLineBuilder>();
             if (line == null) return;
-            line.HitAt(transform.position);
-            Despawn();
+            if (line.HitAt(transform.position)) Despawn();  // 命中した文字が有ればそこで止まる。無ければ貫通
         }
 
         void Despawn()

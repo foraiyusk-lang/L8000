@@ -36,14 +36,27 @@ namespace L8000.EditorTools
         // -----------------------------------------------------------------
         static int _capFrame;
         static string _capOut = "Screenshots/slice1.png";
+
+        // Dynamic Rigidbody2D は transform ではなく rb.position で動かす(でないと固まる)
+        static void TeleportPlayer(PlayerController pc, float x, float y)
+        {
+            if (pc == null) return;
+            var rb = pc.GetComponent<Rigidbody2D>();
+            pc.transform.position = new Vector3(x, y, 0f);
+            if (rb != null) { rb.position = new Vector2(x, y); rb.linearVelocity = Vector2.zero; rb.WakeUp(); }
+            Physics2D.SyncTransforms();
+        }
         static bool _capClimb;
         // 検証: プレイヤーを各高さへワープ → 「・」を上へ連射 → 待って撮影。文字が消えるか確認。
         static readonly float[] _capStops = { 3f, 35f, 80f, 150f };
         static int _capStopIdx;
-        static int _capStage;   // 0=自動スクロール観察, 1=撃ちテスト
+        static int _capStage;   // 0=移動/ジャンプ/スクロール確認, 1=撃ちテスト
         static int _capPhase;   // 0=移動/待機, 1=連射, 2=撮影待ち
         static int _capPhaseFrame;
         static double _capLastLog;
+        static float _capMarkX = -999f, _capPeakY = -999f, _capBaseY = -999f;
+        static bool _capJumpInit, _capMidInit;
+        static float _layoutMaxGap;
 
         public static void PlayCapture()
         {
@@ -68,6 +81,10 @@ namespace L8000.EditorTools
             _capPhase = 0;
             _capPhaseFrame = 0;
             _capLastLog = 0;
+            _capMarkX = -999f; _capPeakY = -999f; _capBaseY = -999f;
+            _capJumpInit = false; _capMidInit = false;
+            var lay = AssetDatabase.LoadAssetAtPath<GameLayout>(LayoutPath);
+            _layoutMaxGap = lay != null ? lay.maxLineGap : 0f;
             EditorApplication.update += CapUpdate;
             Log("entering play mode for capture");
             EditorApplication.EnterPlaymode();
@@ -98,34 +115,73 @@ namespace L8000.EditorTools
 
             bool done = false;
 
-            // --- Stage 0: 中央到達で自動スクロールが始まるか確認 ---
+            // --- Stage 0: 左右移動 / ジャンプ高 / 中央スクロール開始の確認 ---
             if (_capStage == 0)
             {
                 _capPhaseFrame++;
                 var streamer0 = UnityEngine.Object.FindFirstObjectByType<RollStreamer>();
-                float topY = streamer0 != null && streamer0.Roll != null ? streamer0.Roll.TopY : 0f;
+                var roll0 = streamer0 != null ? streamer0.Roll : null;
+                float topY = roll0 != null ? roll0.TopY : 0f;
                 var rb0 = pc != null ? pc.GetComponent<Rigidbody2D>() : null;
-                if (rb0 != null) rb0.simulated = false;
+                double t = EditorApplication.timeSinceStartup - _capStartTime;
 
-                // 下1/4 → 中央より少し上 へワープしていく
-                if (_capPhaseFrame < 120 && pc != null)
-                    pc.transform.position = new Vector3(0f, topY * 0.25f, 0f);
-                else if (pc != null)
-                    pc.transform.position = new Vector3(0f, topY * 0.55f, 0f);
-
-                if (_capPhaseFrame % 40 == 0)
-                    Log($"stage0 f{_capPhaseFrame}: playerY={(pc != null ? pc.transform.position.y : 0):0.0}/{topY:0.0} " +
-                        $"started={(follow != null && follow.Started)} camY={(cam != null ? cam.transform.position.y : 0f):0.0}");
-                if (_capPhaseFrame == 110) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll0.png");
-
-                if (_capPhaseFrame > 360)
+                // A: スポーン床の上で右へ歩く(継ぎ目/スリープで止まらないか)
+                if (t < 5.0)
                 {
-                    CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll1.png");
-                    Log($"stage0 done. started={(follow != null && follow.Started)} (中央=~{topY * 0.5f:0.0}) camY={(cam != null ? cam.transform.position.y : 0f):0.0}");
-                    if (rb0 != null) rb0.simulated = true;
-                    _capStage = 1;
-                    _capPhaseFrame = 0;
+                    if (t > 1.5)
+                    {
+                        PlayerController.DebugAutoWalk = 1;
+                        if (_capMarkX < -900f && pc != null) _capMarkX = pc.transform.position.x;
+                    }
+                    if (t - _capLastLog > 1.0 && pc != null)
+                    {
+                        _capLastLog = t;
+                        Log($"walk t{t:0.0}s: x={pc.transform.position.x:0.00} y={pc.transform.position.y:0.00} " +
+                            $"vx={pc.Velocity.x:0.0} grounded={pc.IsGrounded} 進んだ距離={pc.transform.position.x - (_capMarkX < -900f ? pc.transform.position.x : _capMarkX):0.0}");
+                    }
                 }
+                // B: 天井のない所へワープしてジャンプ高計測
+                else if (t < 11.0)
+                {
+                    PlayerController.DebugAutoWalk = 0;
+                    if (!_capJumpInit && pc != null)
+                    {
+                        _capJumpInit = true;
+                        // ロール頂上(タイトルの上、天井なし)へ
+                        TeleportPlayer(pc, 0f, topY + 0.6f);
+                        _capBaseY = -999f; _capPeakY = -999f;
+                    }
+                    PlayerController.DebugAutoClimb = true;
+                    if (pc != null)
+                    {
+                        if (pc.IsGrounded && _capBaseY < -900f) _capBaseY = pc.transform.position.y;
+                        if (_capBaseY > -900f && pc.transform.position.y > _capPeakY) _capPeakY = pc.transform.position.y;
+                    }
+                }
+                // C: 中央へワープして自動スクロール開始を確認
+                else if (t < 15.0)
+                {
+                    PlayerController.DebugAutoClimb = false;
+                    if (!_capMidInit)
+                    {
+                        _capMidInit = true;
+                        if (_capBaseY > -900f)
+                            Log($"jump apex ≈ {_capPeakY - _capBaseY:0.00}  (base {_capBaseY:0.0} peak {_capPeakY:0.0}) / maxLineGap={_layoutMaxGap:0.00}");
+                        if (rb0 != null) rb0.simulated = false;
+                        if (pc != null) TeleportPlayer(pc, 0f, topY * 0.55f);
+                    }
+                    if (t - _capLastLog > 1.0)
+                    {
+                        _capLastLog = t;
+                        Log($"mid t{t:0.0}s: started={(follow != null && follow.Started)} camY={(cam != null ? cam.transform.position.y : 0):0.0} (中央=~{topY * 0.5f:0.0})");
+                    }
+                }
+                else
+                {
+                    Log($"stage0 done. started={(follow != null && follow.Started)}");
+                    _capStage = 1; _capPhaseFrame = 0;
+                }
+                if (_capPhaseFrame == 120) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_walk.png");
                 return;
             }
 
@@ -140,7 +196,7 @@ namespace L8000.EditorTools
 
                 if (_capPhase == 0) // ワープして静止、少し待つ
                 {
-                    pc.transform.position = new Vector3(-0.3f, y + 1.0f, 0f);
+                    TeleportPlayer(pc, 0f, y + 1.0f);
                     if (rb != null) { rb.linearVelocity = Vector2.zero; rb.simulated = false; }
                     if (cam != null) cam.transform.position = new Vector3(0f, y, -10f);
                     Weapon.DebugAutoFire = false;
@@ -150,11 +206,15 @@ namespace L8000.EditorTools
                         _capPhase = 1; _capPhaseFrame = 0;
                     }
                 }
-                else if (_capPhase == 1) // 上へ連射
+                else if (_capPhase == 1) // 左右に振りながら上へ連射
                 {
+                    CreditLineBuilder.DebugHitLog = _capStopIdx == 0;
                     if (rb != null) rb.simulated = false;
+                    if (pc != null) TeleportPlayer(pc, Mathf.PingPong(_capPhaseFrame * 0.06f, 3f) - 1.5f, y + 0.3f);
                     Weapon.DebugAutoFire = true;
-                    if (_capPhaseFrame > 120) { Weapon.DebugAutoFire = false; _capPhase = 2; _capPhaseFrame = 0; }
+                    if (_capPhaseFrame == 60)
+                        Log($"  bullets alive = {UnityEngine.Object.FindObjectsByType<Bullet>(FindObjectsSortMode.None).Length}");
+                    if (_capPhaseFrame > 150) { Weapon.DebugAutoFire = false; CreditLineBuilder.DebugHitLog = false; _capPhase = 2; _capPhaseFrame = 0; }
                 }
                 else // 弾が飛び切るのを待って撮影
                 {
@@ -590,5 +650,11 @@ namespace L8000.EditorTools
         }
 
         static void Log(string msg) => Debug.Log("[Bootstrap] " + msg);
+
+        static string Trunc(string s, int n)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Length <= n ? s : s.Substring(0, n);
+        }
     }
 }

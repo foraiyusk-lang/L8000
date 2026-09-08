@@ -126,8 +126,8 @@ French :: Studio Palindrome
 German :: Wortспiel GmbH
 Spanish :: Casa Eco
 Italian :: Bottega Ritorno
-Korean :: 되감기 스튜디오
-Simplified Chinese :: 回声本地化
+Korean :: 巻き戻し スタジオ
+Simplified Chinese :: 回声 ローカライズ
 Brazilian Portuguese :: Fim Estudio
 LQA :: 全言語チーム
 

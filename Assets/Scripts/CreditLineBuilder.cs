@@ -6,10 +6,10 @@ namespace L8000
 {
     /// <summary>
     /// クレジット1行を実体化する。プール対象。
-    ///   - 文字は「1文字 = 1個のソリッドな当たり判定」。下からも横からも抜けられない
-    ///   - 単語と単語の間、役割と名前の間、姓と名の間などの空白 = 隙間。プレイヤーはそこを縫って登る
-    ///   - 弾「・」が当たった文字は消える(グリフも当たり判定も)。等幅グリッドなので
-    ///     消しても他の文字の位置はずれない
+    ///   - 足場は「空白で区切られた連続文字ラン = 1個のソリッドな BoxCollider2D」。継ぎ目なし。
+    ///     下からも横からも抜けられない。単語間/役割と名前の間/姓名の間の空白 = 隙間。
+    ///   - 弾が当たった文字は消える。等幅なので消しても他の文字位置はずれない。
+    ///     当たり判定は文字の X 範囲から直接計算する(コライダに依存しない)。
     /// TMP と BoxCollider2D は使い回す(Destroy しない)。
     /// </summary>
     [DisallowMultipleComponent]
@@ -24,24 +24,26 @@ namespace L8000
         {
             public string original = "";
             public bool[] destroyed;
+            public float[] chX0, chX1;   // 各文字の line 空間 X 範囲(不可視は x0==x1)
+            public bool[] chVis;
             public TextMeshPro tmp;
             public float scale;
-            public float k;         // ref空間 → world のスケール
-            public float originX;   // line 空間での左端(全文基準・不変)
+            public float k;
+            public float originX;
+            public bool isRule;
             public readonly List<BoxCollider2D> boxes = new List<BoxCollider2D>();
-            public readonly List<int> boxChar = new List<int>();   // boxes[i] が対応する文字index
             public int usedBoxes;
-            public bool built;
         }
 
         readonly List<Seg> _segs = new List<Seg>();
         int _usedSegs;
-
         Rigidbody2D _body;
-        CompositeCollider2D _composite;
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
+
+        /// <summary>検証用: これまでに弾で消された文字の総数。</summary>
+        public static int TotalCharsDestroyed;
 
         public void Init(GameLayout layout, TMP_FontAsset font, int groundLayer)
         {
@@ -54,20 +56,8 @@ namespace L8000
             _body.bodyType = RigidbodyType2D.Kinematic;
             _body.simulated = true;
 
-            // すべてソリッド。文字ごとの箱を1枚に融合して継ぎ目に引っかからないようにする。
-            _composite = GetComponent<CompositeCollider2D>();
-            if (_composite == null) _composite = gameObject.AddComponent<CompositeCollider2D>();
-            _composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-            _composite.generationType = CompositeCollider2D.GenerationType.Manual;
-            _composite.offsetDistance = 0.01f;
-
             var eff = GetComponent<PlatformEffector2D>();
             if (eff != null) eff.enabled = false;
-        }
-
-        void RegenCollision()
-        {
-            if (_composite != null) _composite.GenerateGeometry();
         }
 
         public void Configure(LineSpec spec)
@@ -86,12 +76,8 @@ namespace L8000
             if (spec.Kind == LineKind.Rule)
             {
                 BuildRule();
-                HideUnused();
-                RegenCollision();
-                return;
             }
-
-            if (spec.Kind == LineKind.RoleName)
+            else if (spec.Kind == LineKind.RoleName)
             {
                 BuildSeg(Sanitize(spec.Left), _layout.roleColor, scale, Align.RightTo, -_layout.centerGap);
                 BuildSeg(Sanitize(spec.Right), _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap);
@@ -109,7 +95,6 @@ namespace L8000
             }
 
             HideUnused();
-            RegenCollision();
         }
 
         public void Release()
@@ -122,71 +107,79 @@ namespace L8000
                 if (s.tmp != null) { s.tmp.text = string.Empty; s.tmp.gameObject.SetActive(false); }
                 for (int b = 0; b < s.boxes.Count; b++) s.boxes[b].enabled = false;
                 s.usedBoxes = 0;
-                s.built = false;
             }
             _usedSegs = 0;
             gameObject.SetActive(false);
         }
 
-        /// <summary>弾がこの行に当たった。world 位置に最も近い文字を1つ消す。</summary>
+        /// <summary>弾がこの行に当たった。world 位置の文字を1つ消す。</summary>
+        public static bool DebugHitLog;
+
         public bool HitAt(Vector2 world)
         {
-            Seg hitSeg = null;
-            int hitChar = -1;
-            float best = float.MaxValue;
+            float lx = world.x - transform.position.x;
+            float ly = world.y - transform.position.y;
 
-            for (int i = 0; i < _usedSegs; i++)
+            float colliderH = ColliderH();
+            if (Mathf.Abs(ly - _layout.colliderYOffset) > colliderH * 0.5f + 0.5f)
             {
-                var s = _segs[i];
-                for (int b = 0; b < s.usedBoxes; b++)
-                {
-                    var col = s.boxes[b];
-                    if (!col.enabled) continue;
-                    int ci = s.boxChar[b];
-                    if (ci < 0 || ci >= s.destroyed.Length || s.destroyed[ci]) continue; // 床(-1)等は壊さない
-
-                    // 行GOは無回転・無スケールなので offset+size から world AABB を直接出す
-                    Vector2 c = (Vector2)transform.position + col.offset;
-                    Vector2 half = col.size * 0.5f;
-                    Vector2 dv = new Vector2(Mathf.Abs(world.x - c.x) - half.x, Mathf.Abs(world.y - c.y) - half.y);
-                    if (dv.x <= 0f && dv.y <= 0f)
-                    {
-                        hitSeg = s; hitChar = ci; best = 0f;
-                        break;
-                    }
-                    float d = ((c - world)).sqrMagnitude;
-                    if (d < best) { best = d; hitSeg = s; hitChar = ci; }
-                }
-                if (best == 0f) break;
+                if (DebugHitLog) Debug.Log($"[Hit] ly reject: ly={ly:0.00} limit={colliderH * 0.5f + 0.5f:0.00}");
+                return false;
             }
 
-            if (hitSeg == null || hitChar < 0 || best > 1.0f) return false;
-            hitSeg.destroyed[hitChar] = true;
-            RenderSeg(hitSeg);
-            RegenCollision();
+            Seg bestSeg = null; int bestChar = -1; float bestDist = float.MaxValue;
+
+            for (int si = 0; si < _usedSegs; si++)
+            {
+                var s = _segs[si];
+                if (s.isRule || s.chX0 == null) continue;
+                for (int i = 0; i < s.chX0.Length; i++)
+                {
+                    if (!s.chVis[i] || s.destroyed[i]) continue;
+                    if (lx >= s.chX0[i] - 0.08f && lx <= s.chX1[i] + 0.08f)
+                        return Destroy(s, i);
+                    float cx = (s.chX0[i] + s.chX1[i]) * 0.5f;
+                    float d = Mathf.Abs(cx - lx);
+                    if (d < bestDist) { bestDist = d; bestSeg = s; bestChar = i; }
+                }
+            }
+
+            if (DebugHitLog)
+                Debug.Log($"[Hit] miss: lx={lx:0.00} ly={ly:0.00} segs={_usedSegs} bestDist={bestDist:0.00} " +
+                    (bestSeg != null ? $"nearestSeg[0..]=({bestSeg.chX0[0]:0.0}..{bestSeg.chX1[bestSeg.chX1.Length - 1]:0.0})" : "noSeg"));
+
+            if (bestSeg != null && bestDist < 0.8f) return Destroy(bestSeg, bestChar);
+            return false;
+        }
+
+        bool Destroy(Seg s, int i)
+        {
+            s.destroyed[i] = true;
+            RenderSeg(s);
             TotalCharsDestroyed++;
             return true;
         }
 
-        /// <summary>検証用: これまでに弾で消された文字の総数。</summary>
-        public static int TotalCharsDestroyed;
-
         // --- 内部 -------------------------------------------------------
         enum Align { Center, LeftFrom, RightTo }
 
-        /// <summary>===== 行: 全幅のソリッドな床。文字ごとの当たり判定は作らず1本の広いコライダ。</summary>
+        float ColliderH()
+        {
+            float cell = _layout.cellHeight > 0f ? _layout.cellHeight : 1f;
+            float chr = _layout.colliderHeightRatio > 0f ? _layout.colliderHeightRatio : 0.9f;
+            return cell * chr;
+        }
+
         void BuildRule()
         {
             Seg seg = GetSeg();
             seg.original = "=";
             seg.destroyed = new bool[1];
-            seg.scale = 1f;
-            seg.k = 1f;
-            seg.originX = 0f;
+            seg.chX0 = null; seg.chX1 = null; seg.chVis = null;
+            seg.isRule = true;
+            seg.scale = 1f; seg.k = 1f; seg.originX = 0f;
 
             float cell = _layout.cellHeight > 0f ? _layout.cellHeight : 1f;
-            float chr = _layout.colliderHeightRatio > 0f ? _layout.colliderHeightRatio : 0.9f;
-
             var tmp = seg.tmp;
             tmp.gameObject.SetActive(true);
             tmp.font = _font;
@@ -197,8 +190,7 @@ namespace L8000
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             tmp.overflowMode = TextOverflowModes.Overflow;
             tmp.fontSize = RefSize;
-            float mspaceEm = _layout.CellWidth(false) / cell;
-            tmp.text = $"<mspace={mspaceEm:0.####}em>{new string('=', 200)}";
+            tmp.text = $"<mspace={_layout.CellWidth(false) / cell:0.####}em>{new string('=', 220)}";
 
             var rt = tmp.rectTransform;
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -214,10 +206,9 @@ namespace L8000
             var box = GetBox(seg);
             box.enabled = true;
             box.isTrigger = false;
-            box.usedByComposite = true;
             box.offset = new Vector2(0f, _layout.colliderYOffset);
-            box.size = new Vector2(240f, Mathf.Max(0.1f, cell * chr));
-            seg.boxChar[seg.usedBoxes - 1] = -1;
+            box.size = new Vector2(400f, Mathf.Max(0.1f, ColliderH()));
+            EnsurePointFilter(_font);
         }
 
         void BuildSeg(string s, Color color, float scale, Align align, float anchorX)
@@ -227,39 +218,46 @@ namespace L8000
             Seg seg = GetSeg();
             seg.original = s;
             seg.destroyed = new bool[s.Length];
+            seg.chX0 = new float[s.Length];
+            seg.chX1 = new float[s.Length];
+            seg.chVis = new bool[s.Length];
+            seg.isRule = false;
             seg.scale = scale;
-            seg.tmp.gameObject.SetActive(true);
-            seg.tmp.font = _font;
-            seg.tmp.color = color;
-            seg.tmp.richText = true;
-            seg.tmp.enableVertexGradient = false;
-            seg.tmp.alignment = TextAlignmentOptions.MidlineLeft;
-            seg.tmp.textWrappingMode = TextWrappingModes.NoWrap;
-            seg.tmp.overflowMode = TextOverflowModes.Overflow;
-            seg.tmp.fontSize = RefSize;
+
+            var tmp = seg.tmp;
+            tmp.gameObject.SetActive(true);
+            tmp.font = _font;
+            tmp.color = color;
+            tmp.richText = true;
+            tmp.enableVertexGradient = false;
+            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode = TextOverflowModes.Overflow;
+            tmp.fontSize = RefSize;
 
             bool cjk = GameLayout.ContainsCJK(s);
             float targetH = _layout.cellHeight * scale;
             float mspaceEm = _layout.CellWidth(cjk) / _layout.cellHeight;
-            seg.tmp.text = $"<mspace={mspaceEm:0.####}em>{s}";
+            tmp.text = $"<mspace={mspaceEm:0.####}em>{s}";
 
-            var rt = seg.tmp.rectTransform;
+            var rt = tmp.rectTransform;
             rt.pivot = new Vector2(0f, 0.5f);
             rt.sizeDelta = new Vector2(10000f, 200f);
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one;
             rt.localPosition = Vector3.zero;
 
-            seg.tmp.ForceMeshUpdate();
+            tmp.ForceMeshUpdate();
             EnsurePointFilter(_font);
-            var ti = seg.tmp.textInfo;
+            var ti = tmp.textInfo;
 
             float refH = (ti.lineCount > 0) ? (ti.lineInfo[0].ascender - ti.lineInfo[0].descender) : RefSize;
             if (refH <= 0.0001f) refH = RefSize;
             seg.k = targetH / refH;
 
             float minX = float.MaxValue, maxX = float.MinValue;
-            for (int i = 0; i < ti.characterCount; i++)
+            int n = Mathf.Min(ti.characterCount, s.Length);
+            for (int i = 0; i < n; i++)
             {
                 var ch = ti.characterInfo[i];
                 if (!ch.isVisible) continue;
@@ -275,24 +273,20 @@ namespace L8000
                 Align.RightTo => anchorX - maxX * seg.k,
                 _ => 0f,
             };
-            seg.built = true;
 
             RenderSeg(seg);
         }
 
-        /// <summary>seg のテキストと当たり判定を(再)構築する。位置・スケールは不変。</summary>
+        /// <summary>テキストと当たり判定を(再)構築する。位置・スケールは不変。</summary>
         void RenderSeg(Seg seg)
         {
-            // 表示文字列: 消された文字は空白に
             var chars = seg.original.ToCharArray();
             for (int i = 0; i < chars.Length; i++)
                 if (seg.destroyed[i]) chars[i] = ' ';
-            string disp = new string(chars);
 
             bool cjk = GameLayout.ContainsCJK(seg.original);
-            float targetH = _layout.cellHeight * seg.scale;
             float mspaceEm = _layout.CellWidth(cjk) / _layout.cellHeight;
-            seg.tmp.text = $"<mspace={mspaceEm:0.####}em>{disp}";
+            seg.tmp.text = $"<mspace={mspaceEm:0.####}em>{new string(chars)}";
 
             var rt = seg.tmp.rectTransform;
             rt.localScale = Vector3.one * seg.k;
@@ -301,30 +295,39 @@ namespace L8000
             seg.tmp.ForceMeshUpdate();
             var ti = seg.tmp.textInfo;
 
-            seg.usedBoxes = 0;
-            float chr = _layout.colliderHeightRatio > 0f ? _layout.colliderHeightRatio : 0.9f;
-            float colliderH = (_layout.cellHeight > 0f ? _layout.cellHeight : 1f) * chr;
-            float wRatio = _layout.charColliderWidthRatio > 0f ? _layout.charColliderWidthRatio : 1f;
-
             int n = Mathf.Min(ti.characterCount, seg.original.Length);
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < seg.chX0.Length; i++)
             {
-                if (seg.destroyed[i]) continue;
-                var ch = ti.characterInfo[i];
-                if (!ch.isVisible) continue; // 空白 = 隙間
+                if (i < n && ti.characterInfo[i].isVisible && !seg.destroyed[i])
+                {
+                    var ch = ti.characterInfo[i];
+                    seg.chX0[i] = seg.originX + ch.origin * seg.k;
+                    seg.chX1[i] = seg.originX + ch.xAdvance * seg.k;
+                    seg.chVis[i] = true;
+                }
+                else
+                {
+                    seg.chVis[i] = false;
+                    seg.chX0[i] = seg.chX1[i] = 0f;
+                }
+            }
 
-                float x0 = seg.originX + ch.origin * seg.k;
-                float x1 = seg.originX + ch.xAdvance * seg.k;
-                float w = (x1 - x0) * wRatio;
-                if (w < 0.03f) w = x1 - x0;
+            // 連続する可視文字 = 1個の足場コライダ(ラン)
+            seg.usedBoxes = 0;
+            float colliderH = ColliderH();
+            int k = 0;
+            while (k < seg.chX0.Length)
+            {
+                if (!seg.chVis[k]) { k++; continue; }
+                int a = k;
+                float left = seg.chX0[k], right = seg.chX1[k];
+                while (k < seg.chX0.Length && seg.chVis[k]) { right = seg.chX1[k]; k++; }
 
-                BoxCollider2D box = GetBox(seg);
+                var box = GetBox(seg);
                 box.enabled = true;
                 box.isTrigger = false;
-                box.usedByComposite = true;
-                box.offset = new Vector2((x0 + x1) * 0.5f, _layout.colliderYOffset);
-                box.size = new Vector2(Mathf.Max(0.03f, w), Mathf.Max(0.1f, colliderH));
-                seg.boxChar[seg.usedBoxes - 1] = i;
+                box.offset = new Vector2((left + right) * 0.5f, _layout.colliderYOffset);
+                box.size = new Vector2(Mathf.Max(0.05f, right - left), Mathf.Max(0.1f, colliderH));
             }
 
             for (int b = seg.usedBoxes; b < seg.boxes.Count; b++)
@@ -356,9 +359,7 @@ namespace L8000
                 return seg.boxes[seg.usedBoxes - 1];
             }
             var box = gameObject.AddComponent<BoxCollider2D>();
-            box.usedByComposite = true;
             seg.boxes.Add(box);
-            seg.boxChar.Add(0);
             seg.usedBoxes++;
             return box;
         }
