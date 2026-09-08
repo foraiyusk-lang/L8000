@@ -64,7 +64,7 @@ namespace L8000
             if (pc != null) pc.enabled = false;
             var prb = player != null ? player.GetComponent<Rigidbody2D>() : null;
             if (prb != null) { prb.bodyType = RigidbodyType2D.Kinematic; prb.linearVelocity = Vector2.zero; }
-            if (player != null) player.position = new Vector3(0f, -0.4f, 0f);
+            if (player != null) player.position = new Vector3(0f, -1.4f, 0f);
 
             // 暗転を戻す(カメラの黒背景 + プレイヤーだけが見える)
             if (blackout != null) yield return Fade(blackout, 1f, 0f, 0.8f);

@@ -691,10 +691,10 @@ namespace L8000.EditorTools
             clockHandGo.transform.SetParent(clockPivotGo.transform, false);
             var clockHandSr = clockHandGo.AddComponent<SpriteRenderer>();
             clockHandSr.sprite = white;                            // white.png 8px @16ppu = 0.5u
-            clockHandSr.color = new Color(1f, 1f, 1f, 0.9f);
+            clockHandSr.color = new Color(1f, 1f, 1f, 1f);
             clockHandSr.sortingOrder = 41;
-            clockHandGo.transform.localScale = new Vector3(0.16f, 2.6f, 1f);   // 幅0.08 / 高さ1.3u
-            clockHandGo.transform.localPosition = new Vector3(0f, 0.65f, 0f);  // ピボットから上へ
+            clockHandGo.transform.localScale = new Vector3(0.34f, 2.9f, 1f);   // 幅0.17 / 高さ1.45u
+            clockHandGo.transform.localPosition = new Vector3(0f, 0.72f, 0f);  // ピボットから上へ
             clockGo.SetActive(false);
 
             // --- 暗転 + 終幕(PLAYED BY / 名前) --------------------
@@ -759,9 +759,26 @@ namespace L8000.EditorTools
             trt.pivot = new Vector2(0.5f, 0.5f);
             trt.sizeDelta = new Vector2(900f, 60f);
 
+            // 「残り」表示の下に置く(クレジットは中央寄せなので左上は常に空いている)
+            var bannerGo = new GameObject("Banner", typeof(RectTransform));
+            bannerGo.transform.SetParent(canvasGo.transform, false);
+            var banner = bannerGo.AddComponent<TMPro.TextMeshProUGUI>();
+            banner.font = font;
+            banner.fontSize = 22f;
+            banner.color = new Color(1f, 1f, 1f, 0f);
+            banner.alignment = TMPro.TextAlignmentOptions.TopLeft;
+            banner.raycastTarget = false;
+            var brt2 = banner.rectTransform;
+            brt2.anchorMin = new Vector2(0f, 1f);
+            brt2.anchorMax = new Vector2(0f, 1f);
+            brt2.pivot = new Vector2(0f, 1f);
+            brt2.anchoredPosition = new Vector2(26f, -62f);
+            brt2.sizeDelta = new Vector2(420f, 40f);
+
             var screenFx = stateGo.AddComponent<ScreenFx>();
             screenFx.flash = flashImg;
             screenFx.toast = toast;
+            screenFx.banner = banner;
 
             // --- 終幕 -----------------------------------------------
             var finaleC = stateGo.AddComponent<Finale>();
@@ -789,6 +806,7 @@ namespace L8000.EditorTools
             // 描画順: HUD / ノイズ / フラッシュ / トースト / 暗転
             noiseGo.transform.SetSiblingIndex(1);
             flashGo.transform.SetAsLastSibling();
+            bannerGo.transform.SetAsLastSibling();
             toastGo.transform.SetAsLastSibling();
             blackoutGo.transform.SetAsLastSibling();
 

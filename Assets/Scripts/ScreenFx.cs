@@ -14,14 +14,16 @@ namespace L8000
         public static ScreenFx Instance { get; private set; }
 
         public TextMeshProUGUI toast;
+        public TextMeshProUGUI banner;   // 画面下の常時表示(降下中「▼ もどっている」など)
         public Image flash;
 
-        Coroutine _toastCo, _flashCo;
+        Coroutine _toastCo, _flashCo, _bannerCo;
 
         void Awake()
         {
             Instance = this;
             if (toast != null) { var c = toast.color; c.a = 0f; toast.color = c; }
+            if (banner != null) { var c = banner.color; c.a = 0f; banner.color = c; }
             if (flash != null) { var c = flash.color; c.a = 0f; flash.color = c; flash.gameObject.SetActive(true); }
         }
 
@@ -70,5 +72,28 @@ namespace L8000
         }
 
         void SetFlashA(Color c, float a) { c.a = Mathf.Clamp01(a); flash.color = c; }
+
+        /// <summary>画面下に常時表示。null/空 で消す。</summary>
+        public static void Banner(string msg, Color color)
+        {
+            var s = Instance;
+            if (s == null || s.banner == null) return;
+            if (s._bannerCo != null) s.StopCoroutine(s._bannerCo);
+            s._bannerCo = s.StartCoroutine(s.BannerCo(msg, color));
+        }
+
+        IEnumerator BannerCo(string msg, Color color)
+        {
+            bool show = !string.IsNullOrEmpty(msg);
+            if (show) banner.text = msg;
+            float from = banner.color.a, to = show ? 1f : 0f, t = 0f;
+            while (t < 0.4f)
+            {
+                t += Time.deltaTime;
+                var c = color; c.a = Mathf.Lerp(from, to, t / 0.4f); banner.color = c;
+                yield return null;
+            }
+            var cc = color; cc.a = to; banner.color = cc;
+        }
     }
 }
