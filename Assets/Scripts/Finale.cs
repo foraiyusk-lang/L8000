@@ -64,7 +64,11 @@ namespace L8000
             // カメラとプレイヤーを原点にそろえる(決め打ち)
             var cf = viewCamera != null ? viewCamera.GetComponent<CameraFollow>() : null;
             if (cf != null) cf.enabled = false;
-            if (viewCamera != null) viewCamera.transform.position = new Vector3(0f, 0f, -10f);
+            if (viewCamera != null)
+            {
+                viewCamera.transform.position = new Vector3(0f, 0f, -10f);
+                viewCamera.transform.rotation = Quaternion.identity;
+            }
 
             var pc = player != null ? player.GetComponent<PlayerController>() : null;
             if (pc != null) pc.enabled = false;
@@ -111,6 +115,7 @@ namespace L8000
             CreditLineBuilder.Garble = false;
             CreditLineBuilder.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
+            CameraFollow.FrameBroken = false;
             WritingBroken = false;
         }
 

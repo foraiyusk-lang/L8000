@@ -31,9 +31,13 @@ namespace L8000
         public bool pixelSnap = true;
         public float pixelsPerUnit = 16f;
 
+        /// <summary>Cinematics 破壊 → フレーム(画面の水平)がゆっくり傾き続ける。</summary>
+        public static bool FrameBroken;
+
         Camera _cam;
         float _y;
         float _vel;
+        float _dutch;
 
         void Awake()
         {
@@ -74,6 +78,15 @@ namespace L8000
                 x = Mathf.Round(x * pixelsPerUnit) / pixelsPerUnit;
             }
             transform.position = new Vector3(x, y, transform.position.z);
+
+            // Cinematics 破壊: フレームがゆっくり傾く(±2°ほど、酔わない速さ)
+            if (FrameBroken)
+            {
+                float t = Time.time;
+                float tgt = Mathf.Sin(t * 0.23f) * 1.4f + Mathf.Sin(t * 0.11f + 1.3f) * 0.7f;
+                _dutch = Mathf.Lerp(_dutch, tgt, 1f - Mathf.Exp(-1.2f * Time.deltaTime));
+                transform.rotation = Quaternion.Euler(0f, 0f, _dutch);
+            }
         }
     }
 }

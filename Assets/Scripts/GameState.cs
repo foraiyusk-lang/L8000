@@ -39,6 +39,7 @@ namespace L8000
             CreditLineBuilder.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
             Finale.WritingBroken = false;
+            CameraFollow.FrameBroken = false;
         }
 
         void Start() => OnChanged?.Invoke(Remaining);

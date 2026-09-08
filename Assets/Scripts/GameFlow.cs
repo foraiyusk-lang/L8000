@@ -129,6 +129,7 @@ namespace L8000
 
             if (playerController != null) playerController.enabled = false;
             if (cameraFollow != null) cameraFollow.enabled = false;   // カメラを固定
+            if (viewCamera != null) viewCamera.transform.rotation = Quaternion.identity;  // 傾き(Cinematics破壊)を戻す
             if (_prb != null) _prb.linearVelocity = Vector2.zero;
             if (weapon != null) weapon.CanFire = false;
             voidRiser.Stop();

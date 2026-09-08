@@ -60,6 +60,7 @@ namespace L8000
             if (r.Contains("localization")) Fire("garble", "翻訳", () => CreditLineBuilder.Garble = true);
             if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", "UI", () => hud?.Kill());
             if (r.Contains("lighting")) Fire("light", "照明", () => ScreenFx.Vignette(0.4f, 2f));
+            if (r.Contains("cinematics") || r.Contains("camera")) Fire("frame", "画面の水平", () => CameraFollow.FrameBroken = true);
             if (r.Contains("writer") || r.Contains("script editor")) Fire("writing", "言葉", () => Finale.WritingBroken = true);
             if (role == "Producer") Fire("producer", "進行管理", () =>
             {
