@@ -40,7 +40,7 @@ namespace L8000
 
         [Header("縁つかまり救済")]
         [Tooltip("ジャンプで足場の角にかすったら自動で上に乗る。乗れる段差の上限(world units)。0で無効。")]
-        public float ledgeMountMax = 0.5f;
+        public float ledgeMountMax = 0.6f;
         [Tooltip("プレイヤーの当たり判定サイズ(縁つかまり判定に使用)。")]
         public Vector2 bodySize = new Vector2(0.26f, 0.36f);
 
@@ -132,7 +132,9 @@ namespace L8000
 
             _rb.linearVelocity = new Vector2(vx, vy);
 
-            if (!_grounded && vy < 4f) TryLedgeMount(dir);
+            // 縁つかまり救済: 進行方向へ動いていて、ジャンプが頂点付近〜落下ぎみのときだけ。
+            // (高速で横に擦っただけで瞬間移動する誤作動を防ぐ)
+            if (!_grounded && vy < 2.5f && Mathf.Abs(dir) > 0.1f) TryLedgeMount(dir);
         }
 
         /// <summary>足場の角に引っかかったら自動で上に乗せる(あと少しで届いたジャンプの救済)。</summary>
@@ -144,8 +146,8 @@ namespace L8000
             float halfH = bodySize.y * 0.5f;
             float feetY = pos.y - halfH;
 
-            // 進行方向優先、止まっていれば両側チェック
-            int[] dirs = Mathf.Abs(dir) > 0.1f ? new[] { (int)Mathf.Sign(dir) } : new[] { 1, -1 };
+            // 進行方向のみ(呼び出し側で dir != 0 を保証)
+            int[] dirs = { (int)Mathf.Sign(dir) };
             foreach (int s in dirs)
             {
                 Vector2 probe = new Vector2(pos.x + s * (halfW + 0.08f), feetY + ledgeMountMax * 0.5f + 0.02f);

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: GameLayout
   m_EditorClassIdentifier: Assembly-CSharp::L8000.GameLayout
   cellHeight: 0.68
-  halfCellWidth: 0.62
-  fullCellWidth: 1.24
+  halfCellWidth: 0.5
+  fullCellWidth: 1
   lineStepY: 1.6
   blankLineGap: 0.4
   headerPad: 0.35
@@ -33,5 +33,5 @@ MonoBehaviour:
   maxSpawnPerFrame: 4
   colliderHeightRatio: 0.9
   colliderYOffset: 0
-  charColliderWidthRatio: 0.85
-  centerChuteHalfWidth: 0.42
+  charColliderWidthRatio: 1
+  centerChuteHalfWidth: 0

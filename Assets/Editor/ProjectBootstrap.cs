@@ -592,8 +592,8 @@ namespace L8000.EditorTools
             // --- 武器(Enter で「・」発射) ---------------------------
             var weapon = playerGo.AddComponent<Weapon>();
             weapon.font = font;
-            weapon.bulletColliderRadius = 0.16f;
-            weapon.bulletVisualHeight = 0.42f;
+            weapon.bulletColliderRadius = 0.22f;
+            weapon.bulletVisualHeight = 0.5f;
             weapon.bulletSpeed = 9f;
             weapon.fireCooldown = 0.22f;
             weapon.muzzleOffsetY = PlayerH * 0.5f + 0.1f;

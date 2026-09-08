@@ -19,11 +19,12 @@ namespace L8000
         [Tooltip("1セル高(world units)。小さくすると文字が小さくなる。lineStepY 等も合わせて調整。")]
         public float cellHeight = 0.68f;
 
-        [Tooltip("欧文(半角)1文字の列幅。空白=隙間の幅にもなる。プレイヤー幅よりしっかり広く。")]
-        public float halfCellWidth = 0.62f;
+        [Tooltip("欧文(半角)1文字の送り幅。小さいほど単語内の字が詰まる。弾で2文字消したとき" +
+                 "できる穴の幅は概ね この2倍。プレイヤー幅(0.26)より十分広く。")]
+        public float halfCellWidth = 0.5f;
 
-        [Tooltip("CJK/全角1文字の列幅。通常は halfCellWidth の2倍。")]
-        public float fullCellWidth = 1.24f;
+        [Tooltip("CJK/全角1文字の送り幅。通常は halfCellWidth の2倍。")]
+        public float fullCellWidth = 1.0f;
 
         [Header("行の縦間隔")]
         [Tooltip("クレジット1エントリごとの基本の縦送り(world units)。")]
@@ -76,11 +77,11 @@ namespace L8000
         [Tooltip("コライダの縦位置オフセット(world units)。+で上へ。")]
         public float colliderYOffset = 0f;
 
-        [Tooltip("1文字あたりのコライダ幅の比率(送り幅に対して)。<1 で文字間にも細い隙間。")]
-        [Range(0.5f, 1f)] public float charColliderWidthRatio = 0.85f;
+        [Tooltip("未使用(行1本ソリッドバー化で不要になった)。")]
+        [Range(0.5f, 1f)] public float charColliderWidthRatio = 1f;
 
-        [Tooltip("中央の『縦の道』の半幅(world units)。全ての行でこの列だけ足場が空く → まっすぐ登れる。0で無効。")]
-        public float centerChuteHalfWidth = 0.42f;
+        [Tooltip("未使用(中央チュートは廃止。穴は弾で開ける)。")]
+        public float centerChuteHalfWidth = 0f;
 
         // --- 便利プロパティ -------------------------------------------------
         public float CellWidth(bool wide) => wide ? fullCellWidth : halfCellWidth;

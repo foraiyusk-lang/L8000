@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using TMPro;
 using UnityEngine;
 
@@ -6,10 +7,11 @@ namespace L8000
 {
     /// <summary>
     /// クレジット1行を実体化する。プール対象。
-    ///   - 足場は「空白で区切られた連続文字ラン = 1個のソリッドな BoxCollider2D」。継ぎ目なし。
-    ///     下からも横からも抜けられない。単語間/役割と名前の間/姓名の間の空白 = 隙間。
-    ///   - 弾が当たった文字は消える。等幅なので消しても他の文字位置はずれない。
-    ///     当たり判定は文字の X 範囲から直接計算する(コライダに依存しない)。
+    ///   - 当たり判定は「行1本のソリッドなバー」(minX..maxX)。単語内・単語間の隙間はすべて埋まっていて
+    ///     プレイヤーは文字の間をすり抜けられない(端まで歩いて隣の行へ跳ぶ簡単な登り)。
+    ///   - 弾が当たると命中文字＋隣の1文字が消え、その X 範囲だけバーに穴が開く → そこを通って上へ抜けられる
+    ///     (任意のショートカット)。等幅(mspace)なので消しても文字位置はずれない。
+    ///   - 命中判定は文字の X 範囲から直接計算する(コライダに依存しない)。
     /// TMP と BoxCollider2D は使い回す(Destroy しない)。
     /// </summary>
     [DisallowMultipleComponent]
@@ -24,26 +26,32 @@ namespace L8000
         {
             public string original = "";
             public bool[] destroyed;
-            public float[] chX0, chX1;   // 各文字の line 空間 X 範囲(不可視は x0==x1)
-            public bool[] chVis;
+            public float[] baseX0, baseX1;   // 各文字の line 空間 X 範囲(破壊されても不変)
+            public bool[] chVis;             // もともと可視の文字か
             public TextMeshPro tmp;
-            public float scale;
-            public float k;
+            public float k = 1f;
             public float originX;
+            public float mspaceEm = 1f;
             public bool isRule;
-            public readonly List<BoxCollider2D> boxes = new List<BoxCollider2D>();
-            public int usedBoxes;
         }
 
         readonly List<Seg> _segs = new List<Seg>();
         int _usedSegs;
+        readonly List<BoxCollider2D> _bars = new List<BoxCollider2D>();
+        int _usedBars;
         Rigidbody2D _body;
+        PlatformEffector2D _effector;
+        bool _oneWay;
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
 
         /// <summary>検証用: これまでに弾で消された文字の総数。</summary>
         public static int TotalCharsDestroyed;
+        public static bool DebugHitLog;
+
+        /// <summary>文字が破壊されたとき (行, 破壊された文字の連結). 機能無効化フックが購読する。</summary>
+        public static System.Action<CreditLineBuilder, string> OnCharsDestroyed;
 
         public void Init(GameLayout layout, TMP_FontAsset font, int groundLayer)
         {
@@ -56,8 +64,13 @@ namespace L8000
             _body.bodyType = RigidbodyType2D.Kinematic;
             _body.simulated = true;
 
-            var eff = GetComponent<PlatformEffector2D>();
-            if (eff != null) eff.enabled = false;
+            _effector = GetComponent<PlatformEffector2D>();
+            if (_effector == null) _effector = gameObject.AddComponent<PlatformEffector2D>();
+            _effector.useOneWay = true;
+            _effector.useOneWayGrouping = true;
+            _effector.surfaceArc = 150f;      // 上向き±75°から着地可、下から/横からは通り抜け
+            _effector.useColliderMask = false;
+            _effector.enabled = false;
         }
 
         public void Configure(LineSpec spec)
@@ -65,9 +78,14 @@ namespace L8000
             Spec = spec;
             Active = true;
             _usedSegs = 0;
+            _usedBars = 0;
 
             transform.position = new Vector3(0f, spec.WorldY, 0f);
             gameObject.name = $"Line[{spec.Kind}] y{spec.WorldY:0.0}";
+
+            // Rule(=====)は完全ソリッドなゲート。それ以外は下からすり抜けられる一方通行の足場。
+            _oneWay = spec.Kind != LineKind.Rule;
+            _effector.enabled = _oneWay;
 
             float scale = spec.Kind == LineKind.Title ? _layout.titleScale
                         : spec.Kind == LineKind.Header ? _layout.headerScale
@@ -81,6 +99,7 @@ namespace L8000
             {
                 BuildSeg(Sanitize(spec.Left), _layout.roleColor, scale, Align.RightTo, -_layout.centerGap);
                 BuildSeg(Sanitize(spec.Right), _layout.nameColor, scale, Align.LeftFrom, _layout.centerGap);
+                RebuildBars();
             }
             else
             {
@@ -92,6 +111,7 @@ namespace L8000
                     _ => _layout.nameColor,
                 };
                 BuildSeg(Sanitize(spec.Left), color, scale, Align.Center, 0f);
+                RebuildBars();
             }
 
             HideUnused();
@@ -105,16 +125,14 @@ namespace L8000
             {
                 var s = _segs[i];
                 if (s.tmp != null) { s.tmp.text = string.Empty; s.tmp.gameObject.SetActive(false); }
-                for (int b = 0; b < s.boxes.Count; b++) s.boxes[b].enabled = false;
-                s.usedBoxes = 0;
             }
+            for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
             _usedSegs = 0;
+            _usedBars = 0;
             gameObject.SetActive(false);
         }
 
-        /// <summary>弾がこの行に当たった。world 位置の文字を1つ消す。</summary>
-        public static bool DebugHitLog;
-
+        // --- 命中 ---------------------------------------------------------
         public bool HitAt(Vector2 world)
         {
             float lx = world.x - transform.position.x;
@@ -123,7 +141,7 @@ namespace L8000
             float colliderH = ColliderH();
             if (Mathf.Abs(ly - _layout.colliderYOffset) > colliderH * 0.5f + 0.5f)
             {
-                if (DebugHitLog) Debug.Log($"[Hit] ly reject: ly={ly:0.00} limit={colliderH * 0.5f + 0.5f:0.00}");
+                if (DebugHitLog) Debug.Log($"[Hit] ly reject: ly={ly:0.00}");
                 return false;
             }
 
@@ -132,32 +150,47 @@ namespace L8000
             for (int si = 0; si < _usedSegs; si++)
             {
                 var s = _segs[si];
-                if (s.isRule || s.chX0 == null) continue;
-                for (int i = 0; i < s.chX0.Length; i++)
+                if (s.isRule || s.baseX0 == null) continue;
+                for (int i = 0; i < s.baseX0.Length; i++)
                 {
                     if (!s.chVis[i] || s.destroyed[i]) continue;
-                    if (lx >= s.chX0[i] - 0.08f && lx <= s.chX1[i] + 0.08f)
-                        return Destroy(s, i);
-                    float cx = (s.chX0[i] + s.chX1[i]) * 0.5f;
+                    if (lx >= s.baseX0[i] - 0.08f && lx <= s.baseX1[i] + 0.08f)
+                        return DestroyAround(s, i);
+                    float cx = (s.baseX0[i] + s.baseX1[i]) * 0.5f;
                     float d = Mathf.Abs(cx - lx);
                     if (d < bestDist) { bestDist = d; bestSeg = s; bestChar = i; }
                 }
             }
 
             if (DebugHitLog)
-                Debug.Log($"[Hit] miss: lx={lx:0.00} ly={ly:0.00} segs={_usedSegs} bestDist={bestDist:0.00} " +
-                    (bestSeg != null ? $"nearestSeg[0..]=({bestSeg.chX0[0]:0.0}..{bestSeg.chX1[bestSeg.chX1.Length - 1]:0.0})" : "noSeg"));
+                Debug.Log($"[Hit] miss: lx={lx:0.00} ly={ly:0.00} segs={_usedSegs} bestDist={bestDist:0.00}");
 
-            if (bestSeg != null && bestDist < 0.8f) return Destroy(bestSeg, bestChar);
+            if (bestSeg != null && bestDist < 0.8f) return DestroyAround(bestSeg, bestChar);
             return false;
         }
 
-        bool Destroy(Seg s, int i)
+        /// <summary>命中文字 i と隣の1文字を消す(プレイヤーが通れる幅の穴)。</summary>
+        bool DestroyAround(Seg s, int i)
         {
-            s.destroyed[i] = true;
+            var hit = new StringBuilder();
+            MarkDestroyed(s, i, hit);
+
+            // 隣を1つ: 可視で未破壊の側を優先(右→左)
+            if (i + 1 < s.destroyed.Length && s.chVis[i + 1] && !s.destroyed[i + 1]) MarkDestroyed(s, i + 1, hit);
+            else if (i - 1 >= 0 && s.chVis[i - 1] && !s.destroyed[i - 1]) MarkDestroyed(s, i - 1, hit);
+
             RenderSeg(s);
-            TotalCharsDestroyed++;
+            RebuildBars();
+            OnCharsDestroyed?.Invoke(this, hit.ToString());
             return true;
+        }
+
+        void MarkDestroyed(Seg s, int i, StringBuilder acc)
+        {
+            if (s.destroyed[i]) return;
+            s.destroyed[i] = true;
+            TotalCharsDestroyed++;
+            if (i < s.original.Length) acc.Append(s.original[i]);
         }
 
         // --- 内部 -------------------------------------------------------
@@ -175,9 +208,9 @@ namespace L8000
             Seg seg = GetSeg();
             seg.original = "=";
             seg.destroyed = new bool[1];
-            seg.chX0 = null; seg.chX1 = null; seg.chVis = null;
+            seg.baseX0 = null; seg.baseX1 = null; seg.chVis = null;
             seg.isRule = true;
-            seg.scale = 1f; seg.k = 1f; seg.originX = 0f;
+            seg.k = 1f; seg.originX = 0f;
 
             float cell = _layout.cellHeight > 0f ? _layout.cellHeight : 1f;
             var tmp = seg.tmp;
@@ -203,9 +236,10 @@ namespace L8000
             if (refH <= 0.0001f) refH = RefSize;
             rt.localScale = Vector3.one * (cell / refH);
 
-            var box = GetBox(seg);
+            var box = GetBar();
             box.enabled = true;
             box.isTrigger = false;
+            box.usedByEffector = false;   // Rule は完全ソリッド
             box.offset = new Vector2(0f, _layout.colliderYOffset);
             box.size = new Vector2(400f, Mathf.Max(0.1f, ColliderH()));
             EnsurePointFilter(_font);
@@ -218,11 +252,10 @@ namespace L8000
             Seg seg = GetSeg();
             seg.original = s;
             seg.destroyed = new bool[s.Length];
-            seg.chX0 = new float[s.Length];
-            seg.chX1 = new float[s.Length];
+            seg.baseX0 = new float[s.Length];
+            seg.baseX1 = new float[s.Length];
             seg.chVis = new bool[s.Length];
             seg.isRule = false;
-            seg.scale = scale;
 
             var tmp = seg.tmp;
             tmp.gameObject.SetActive(true);
@@ -237,8 +270,8 @@ namespace L8000
 
             bool cjk = GameLayout.ContainsCJK(s);
             float targetH = _layout.cellHeight * scale;
-            float mspaceEm = _layout.CellWidth(cjk) / _layout.cellHeight;
-            tmp.text = $"<mspace={mspaceEm:0.####}em>{s}";
+            seg.mspaceEm = _layout.CellWidth(cjk) / _layout.cellHeight;
+            tmp.text = $"<mspace={seg.mspaceEm:0.####}em>{s}";
 
             var rt = tmp.rectTransform;
             rt.pivot = new Vector2(0f, 0.5f);
@@ -274,81 +307,102 @@ namespace L8000
                 _ => 0f,
             };
 
-            RenderSeg(seg);
-        }
-
-        /// <summary>テキストと当たり判定を(再)構築する。位置・スケールは不変。</summary>
-        void RenderSeg(Seg seg)
-        {
-            var chars = seg.original.ToCharArray();
-            for (int i = 0; i < chars.Length; i++)
-                if (seg.destroyed[i]) chars[i] = ' ';
-
-            bool cjk = GameLayout.ContainsCJK(seg.original);
-            float mspaceEm = _layout.CellWidth(cjk) / _layout.cellHeight;
-            seg.tmp.text = $"<mspace={mspaceEm:0.####}em>{new string(chars)}";
-
-            var rt = seg.tmp.rectTransform;
-            rt.localScale = Vector3.one * seg.k;
-            rt.localPosition = new Vector3(seg.originX, 0f, 0f);
-
-            seg.tmp.ForceMeshUpdate();
-            var ti = seg.tmp.textInfo;
-
-            int n = Mathf.Min(ti.characterCount, seg.original.Length);
-            for (int i = 0; i < seg.chX0.Length; i++)
+            // 文字ごとの X 範囲を確定(以後不変)。可視文字だけがバーの範囲に効く。
+            for (int i = 0; i < s.Length; i++)
             {
-                if (i < n && ti.characterInfo[i].isVisible && !seg.destroyed[i])
+                if (i < n && ti.characterInfo[i].isVisible)
                 {
                     var ch = ti.characterInfo[i];
-                    seg.chX0[i] = seg.originX + ch.origin * seg.k;
-                    seg.chX1[i] = seg.originX + ch.xAdvance * seg.k;
+                    seg.baseX0[i] = seg.originX + ch.origin * seg.k;
+                    seg.baseX1[i] = seg.originX + ch.xAdvance * seg.k;
                     seg.chVis[i] = true;
                 }
                 else
                 {
                     seg.chVis[i] = false;
-                    seg.chX0[i] = seg.chX1[i] = 0f;
+                    seg.baseX0[i] = seg.baseX1[i] = 0f;
                 }
             }
 
-            // 連続する可視文字 = 1個の足場コライダ(ラン)。中央の『縦の道』はくり抜く。
-            seg.usedBoxes = 0;
-            float colliderH = ColliderH();
-            float chute = Mathf.Max(0f, _layout.centerChuteHalfWidth);
-            int k = 0;
-            while (k < seg.chX0.Length)
-            {
-                if (!seg.chVis[k]) { k++; continue; }
-                float left = seg.chX0[k], right = seg.chX1[k];
-                while (k < seg.chX0.Length && seg.chVis[k]) { right = seg.chX1[k]; k++; }
-                AddRunCollider(seg, left, right, colliderH, chute);
-            }
-
-            for (int b = seg.usedBoxes; b < seg.boxes.Count; b++)
-                seg.boxes[b].enabled = false;
+            RenderSeg(seg);
         }
 
-        /// <summary>ラン[left,right]を足場化。中央 [-chute,+chute] に掛かる場合は左右に分割してくり抜く。</summary>
-        void AddRunCollider(Seg seg, float left, float right, float colliderH, float chute)
+        /// <summary>破壊された文字を空白に置換して描画。位置・スケールは不変。コライダは触らない。</summary>
+        void RenderSeg(Seg seg)
         {
-            if (chute <= 0f || right <= -chute || left >= chute)
+            if (seg.baseX0 == null) return;
+            var chars = seg.original.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+                if (seg.destroyed[i]) chars[i] = ' ';
+
+            seg.tmp.text = $"<mspace={seg.mspaceEm:0.####}em>{new string(chars)}";
+            var rt = seg.tmp.rectTransform;
+            rt.localScale = Vector3.one * seg.k;
+            rt.localPosition = new Vector3(seg.originX, 0f, 0f);
+            seg.tmp.ForceMeshUpdate();
+        }
+
+        /// <summary>行1本のソリッドバーを組む。破壊された文字の X 範囲だけ穴。</summary>
+        void RebuildBars()
+        {
+            _usedBars = 0;
+
+            float lineMin = float.MaxValue, lineMax = float.MinValue;
+            for (int si = 0; si < _usedSegs; si++)
             {
-                EmitBox(seg, left, right, colliderH);
+                var s = _segs[si];
+                if (s.baseX0 == null) continue;
+                for (int i = 0; i < s.baseX0.Length; i++)
+                {
+                    if (!s.chVis[i]) continue;
+                    if (s.baseX0[i] < lineMin) lineMin = s.baseX0[i];
+                    if (s.baseX1[i] > lineMax) lineMax = s.baseX1[i];
+                }
+            }
+            if (lineMin == float.MaxValue || lineMax <= lineMin)
+            {
+                for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
                 return;
             }
-            if (left < -chute) EmitBox(seg, left, -chute, colliderH);
-            if (right > chute) EmitBox(seg, chute, right, colliderH);
+
+            // 穴(破壊された可視文字の X 範囲、少し広げる)
+            var holes = new List<Vector2>();
+            const float pad = 0.06f;
+            for (int si = 0; si < _usedSegs; si++)
+            {
+                var s = _segs[si];
+                if (s.baseX0 == null) continue;
+                for (int i = 0; i < s.baseX0.Length; i++)
+                    if (s.destroyed[i] && s.chVis[i])
+                        holes.Add(new Vector2(s.baseX0[i] - pad, s.baseX1[i] + pad));
+            }
+            holes.Sort((a, b) => a.x.CompareTo(b.x));
+
+            float colliderH = ColliderH();
+            float cursor = lineMin;
+            foreach (var h in holes)
+            {
+                float hl = Mathf.Clamp(h.x, lineMin, lineMax);
+                float hr = Mathf.Clamp(h.y, lineMin, lineMax);
+                if (hr <= cursor) continue;
+                if (hl > cursor) EmitBar(cursor, hl, colliderH);
+                cursor = Mathf.Max(cursor, hr);
+            }
+            if (cursor < lineMax) EmitBar(cursor, lineMax, colliderH);
+
+            for (int b = _usedBars; b < _bars.Count; b++) _bars[b].enabled = false;
         }
 
-        void EmitBox(Seg seg, float left, float right, float colliderH)
+        void EmitBar(float left, float right, float h)
         {
-            if (right - left < 0.03f) return;
-            var box = GetBox(seg);
+            // プレイヤーが乗れない細片は足場にしない(弾で開けた穴まわりのゴミ対策)
+            if (right - left < 0.22f) return;
+            var box = GetBar();
             box.enabled = true;
             box.isTrigger = false;
+            box.usedByEffector = _oneWay;
             box.offset = new Vector2((left + right) * 0.5f, _layout.colliderYOffset);
-            box.size = new Vector2(right - left, Mathf.Max(0.1f, colliderH));
+            box.size = new Vector2(right - left, Mathf.Max(0.1f, h));
         }
 
         Seg GetSeg()
@@ -356,7 +410,6 @@ namespace L8000
             if (_usedSegs < _segs.Count)
             {
                 var s = _segs[_usedSegs++];
-                s.usedBoxes = 0;
                 return s;
             }
             var go = new GameObject("seg", typeof(TextMeshPro));
@@ -368,16 +421,16 @@ namespace L8000
             return seg;
         }
 
-        BoxCollider2D GetBox(Seg seg)
+        BoxCollider2D GetBar()
         {
-            if (seg.usedBoxes < seg.boxes.Count)
+            if (_usedBars < _bars.Count)
             {
-                seg.usedBoxes++;
-                return seg.boxes[seg.usedBoxes - 1];
+                _usedBars++;
+                return _bars[_usedBars - 1];
             }
             var box = gameObject.AddComponent<BoxCollider2D>();
-            seg.boxes.Add(box);
-            seg.usedBoxes++;
+            _bars.Add(box);
+            _usedBars++;
             return box;
         }
 
@@ -387,8 +440,6 @@ namespace L8000
             {
                 var s = _segs[k];
                 if (s.tmp != null) { s.tmp.text = string.Empty; s.tmp.gameObject.SetActive(false); }
-                for (int b = 0; b < s.boxes.Count; b++) s.boxes[b].enabled = false;
-                s.usedBoxes = 0;
             }
         }
 
