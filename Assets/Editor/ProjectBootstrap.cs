@@ -665,14 +665,36 @@ namespace L8000.EditorTools
             voidRiser.viewCamera = cam;
             voidRiser.streamer = streamer;
 
-            // --- 時計の針(巻き戻しが止まる演出) --------------------
-            var clockGo = new GameObject("ClockPivot");
-            clockGo.transform.position = new Vector3(0f, 0f, 0f);   // GameFlow が実行時にカメラ前へ
-            var clockRingGo = new GameObject("Ring");
-            clockRingGo.transform.SetParent(clockGo.transform, false);
-            var clockRing = clockRingGo.AddComponent<SpriteRenderer>();
-            clockRing.sprite = white; clockRing.color = new Color(1f, 1f, 1f, 0.5f); clockRing.sortingOrder = 40;
-            clockRingGo.transform.localScale = new Vector3(0.06f, 0.9f, 1f);   // 縦棒 = 針
+            // --- 時計(巻き戻しが止まる演出) --------------------
+            var clockFace = EnsureClockSprite();
+            var clockGo = new GameObject("Clock");                 // ルート(GameFlow がカメラ前へ)
+
+            var clockDimGo = new GameObject("Dim");                // 背景を暗く(時計を見せる)
+            clockDimGo.transform.SetParent(clockGo.transform, false);
+            var clockDimSr = clockDimGo.AddComponent<SpriteRenderer>();
+            clockDimSr.sprite = white;
+            clockDimSr.color = new Color(0f, 0f, 0f, 0f);
+            clockDimSr.sortingOrder = 38;
+            clockDimGo.transform.localScale = new Vector3(120f, 80f, 1f);
+
+            var clockFaceGo = new GameObject("Face");
+            clockFaceGo.transform.SetParent(clockGo.transform, false);
+            var clockFaceSr = clockFaceGo.AddComponent<SpriteRenderer>();
+            clockFaceSr.sprite = clockFace;
+            clockFaceSr.color = new Color(1f, 1f, 1f, 0.7f);
+            clockFaceSr.sortingOrder = 40;
+            clockFaceGo.transform.localScale = Vector3.one * (3.4f / 8f);   // clock.png 128px @16ppu = 8u → 直径 3.4u
+
+            var clockPivotGo = new GameObject("HandPivot");        // これを回す
+            clockPivotGo.transform.SetParent(clockGo.transform, false);
+            var clockHandGo = new GameObject("Hand");
+            clockHandGo.transform.SetParent(clockPivotGo.transform, false);
+            var clockHandSr = clockHandGo.AddComponent<SpriteRenderer>();
+            clockHandSr.sprite = white;                            // white.png 8px @16ppu = 0.5u
+            clockHandSr.color = new Color(1f, 1f, 1f, 0.9f);
+            clockHandSr.sortingOrder = 41;
+            clockHandGo.transform.localScale = new Vector3(0.16f, 2.6f, 1f);   // 幅0.08 / 高さ1.3u
+            clockHandGo.transform.localPosition = new Vector3(0f, 0.65f, 0f);  // ピボットから上へ
             clockGo.SetActive(false);
 
             // --- 暗転 + 終幕(PLAYED BY / 名前) --------------------
@@ -760,7 +782,9 @@ namespace L8000.EditorTools
             flow.streamer = streamer;
             flow.voidRiser = voidRiser;
             flow.finale = finaleC;
-            flow.clockPivot = clockGo.transform;
+            flow.dim = clockDimSr;
+            flow.clockRoot = clockGo.transform;
+            flow.clockPivot = clockPivotGo.transform;
 
             // 描画順: HUD / ノイズ / フラッシュ / トースト / 暗転
             noiseGo.transform.SetSiblingIndex(1);
@@ -981,6 +1005,29 @@ namespace L8000.EditorTools
             slider.direction = UnityEngine.UI.Slider.Direction.LeftToRight;
             slider.minValue = 0f; slider.maxValue = 1f;
             return slider;
+        }
+
+        static Sprite EnsureClockSprite()
+        {
+            const string path = "Assets/Art/clock.png";
+            if (!File.Exists(path))
+            {
+                var tex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+                var px = new Color32[64 * 64];
+                for (int i = 0; i < px.Length; i++) px[i] = new Color32(255, 255, 255, 40);
+                tex.SetPixels32(px); tex.Apply();
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
+            }
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            var imp = (TextureImporter)AssetImporter.GetAtPath(path);
+            imp.textureType = TextureImporterType.Sprite;
+            imp.spriteImportMode = SpriteImportMode.Single;
+            imp.filterMode = FilterMode.Bilinear;
+            imp.spritePixelsPerUnit = 16;
+            imp.mipmapEnabled = false;
+            imp.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         static Sprite EnsureLogoSprite()

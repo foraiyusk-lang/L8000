@@ -21,6 +21,8 @@ namespace L8000
         public RollStreamer streamer;
         public VoidRiser voidRiser;
         public Finale finale;
+        public SpriteRenderer dim;     // 巻き戻し中に背景を少し暗く(Clock の子)
+        public Transform clockRoot;    // 時計まるごと(カメラ前へ置く)
         public Transform clockPivot;   // 時計の針(回転させる)
 
         [Header("登り")]
@@ -47,7 +49,7 @@ namespace L8000
         void Start()
         {
             if (weapon != null) { weapon.CanFire = true; weapon.FireDown = false; }
-            if (clockPivot != null) clockPivot.gameObject.SetActive(false);
+            if (clockRoot != null) clockRoot.gameObject.SetActive(false);
             StartCoroutine(InitAudio());
         }
 
@@ -55,6 +57,20 @@ namespace L8000
         {
             yield return null;                          // 全 Start の後に
             AudioManager.Instance?.SetReversed(true);   // 登り = 逆再生
+        }
+
+        static IEnumerator FadeSr(SpriteRenderer sr, float from, float to, float dur)
+        {
+            float e = 0f;
+            var c = sr.color;
+            while (e < dur && sr != null)
+            {
+                e += Time.deltaTime;
+                c.a = Mathf.Lerp(from, to, e / dur);
+                sr.color = c;
+                yield return null;
+            }
+            if (sr != null) { c.a = to; sr.color = c; }
         }
 
         void OnEnable()
@@ -112,41 +128,55 @@ namespace L8000
             _phase = Phase.Rewind;
 
             if (playerController != null) playerController.enabled = false;
+            if (cameraFollow != null) cameraFollow.enabled = false;   // カメラを固定
             if (_prb != null) _prb.linearVelocity = Vector2.zero;
             if (weapon != null) weapon.CanFire = false;
             voidRiser.Stop();
 
-            ScreenFx.Toast("― 巻き戻しが 止まる ―", new Color(0.85f, 0.9f, 1f), 3.0f);
+            ScreenFx.Toast("― 巻き戻しが 止まる ―", new Color(0.85f, 0.9f, 1f), 3.4f);
+            AudioManager.Instance?.CrossfadeToForward(2.8f);   // 逆→順(途中で一瞬止まる)
 
-            // 時計の針: 速く逆回転 → 減速 → 12時で停止
+            // 背景を少し暗く(時計を見せる)
+            if (dim != null) StartCoroutine(FadeSr(dim, 0f, 0.62f, 0.5f));
+
+            // 時計をカメラ前に置く
+            var cam = viewCamera != null ? viewCamera.transform.position : Vector3.zero;
+            if (clockRoot != null)
+            {
+                clockRoot.gameObject.SetActive(true);
+                clockRoot.position = new Vector3(cam.x, cam.y + 0.3f, 0f);
+            }
+
+            // 針: 速い逆回転 → 減速 → 12時でスナップ停止
             if (clockPivot != null)
             {
-                clockPivot.gameObject.SetActive(true);
-                float ang = 0f, spin = 900f;   // deg/s (逆回転)
-                float dur = 2.6f, e = 0f;
+                float ang = clockPivot.localEulerAngles.z;
+                float dur = 2.4f, e = 0f;
                 while (e < dur)
                 {
                     e += Time.deltaTime;
-                    spin = Mathf.Lerp(900f, 0f, e / dur);
-                    ang -= spin * Time.deltaTime;
+                    float spin = Mathf.Lerp(720f, 0f, Mathf.SmoothStep(0f, 1f, e / dur));
+                    ang -= spin * Time.deltaTime;                   // 逆回転
                     clockPivot.localRotation = Quaternion.Euler(0, 0, ang);
+                    if (clockRoot != null && viewCamera != null)
+                        clockRoot.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y + 0.3f, 0f);
                     yield return null;
                 }
-                // 12時(上向き)へスナップ
-                float cur = clockPivot.localEulerAngles.z;
-                for (float k = 0; k < 1f; k += Time.deltaTime * 3f)
+                // 12時(上向き)へなめらかに
+                var from = clockPivot.localRotation;
+                for (float k = 0; k < 1f; k += Time.deltaTime * 2.2f)
                 {
-                    clockPivot.localRotation = Quaternion.Slerp(Quaternion.Euler(0, 0, cur), Quaternion.identity, k);
+                    clockPivot.localRotation = Quaternion.Slerp(from, Quaternion.identity, Mathf.SmoothStep(0f, 1f, k));
                     yield return null;
                 }
                 clockPivot.localRotation = Quaternion.identity;
             }
 
             ScreenFx.Flash(new Color(1f, 1f, 1f, 0.85f), 0.7f);
-            AudioManager.Instance?.CrossfadeToForward(1.6f);   // 逆→順(途中で一瞬止まる)
-            yield return new WaitForSeconds(0.9f);
+            if (dim != null) StartCoroutine(FadeSr(dim, dim.color.a, 0f, 0.6f));
+            yield return new WaitForSeconds(0.7f);
 
-            if (clockPivot != null) clockPivot.gameObject.SetActive(false);
+            if (clockRoot != null) clockRoot.gameObject.SetActive(false);
             BeginDescent();
         }
 
