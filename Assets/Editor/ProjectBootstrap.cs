@@ -775,10 +775,20 @@ namespace L8000.EditorTools
             brt2.anchoredPosition = new Vector2(26f, -62f);
             brt2.sizeDelta = new Vector2(420f, 40f);
 
+            var vigGo = new GameObject("Vignette", typeof(RectTransform));
+            vigGo.transform.SetParent(canvasGo.transform, false);
+            var vigImg = vigGo.AddComponent<UnityEngine.UI.Image>();
+            vigImg.color = new Color(0f, 0f, 0.02f, 0f);
+            vigImg.raycastTarget = false;
+            var vrt = vigImg.rectTransform;
+            vrt.anchorMin = Vector2.zero; vrt.anchorMax = Vector2.one;
+            vrt.offsetMin = Vector2.zero; vrt.offsetMax = Vector2.zero;
+
             var screenFx = stateGo.AddComponent<ScreenFx>();
             screenFx.flash = flashImg;
             screenFx.toast = toast;
             screenFx.banner = banner;
+            screenFx.vignette = vigImg;
 
             // --- 終幕 -----------------------------------------------
             var finaleC = stateGo.AddComponent<Finale>();
@@ -804,7 +814,8 @@ namespace L8000.EditorTools
             flow.clockPivot = clockPivotGo.transform;
 
             // 描画順: HUD / ノイズ / フラッシュ / トースト / 暗転
-            noiseGo.transform.SetSiblingIndex(1);
+            vigGo.transform.SetSiblingIndex(1);       // クレジットより上、他の演出より下
+            noiseGo.transform.SetSiblingIndex(2);
             flashGo.transform.SetAsLastSibling();
             bannerGo.transform.SetAsLastSibling();
             toastGo.transform.SetAsLastSibling();

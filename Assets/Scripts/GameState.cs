@@ -38,6 +38,7 @@ namespace L8000
             CreditLineBuilder.Garble = false;
             CreditLineBuilder.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
+            Finale.WritingBroken = false;
         }
 
         void Start() => OnChanged?.Invoke(Remaining);

@@ -105,6 +105,7 @@ namespace L8000
             CreditLineBuilder.Garble = false;
             CreditLineBuilder.DescentDropDestroyed = false;
             PlayerController.PhysicsAnomaly = false;
+            WritingBroken = false;
         }
 
         static IEnumerator Fade(Image img, float from, float to, float dur)
@@ -121,9 +122,13 @@ namespace L8000
             c.a = to; img.color = c;
         }
 
+        /// <summary>Lead Writer / Script Editor 破壊 → 最後の1行が黒塗りに。</summary>
+        public static bool WritingBroken;
+
         /// <summary>破壊数と経路で分岐する最後の1行。</summary>
         public static string EndSequence_FinalLine(bool badEnd, int destroyed)
         {
+            if (WritingBroken) return "██████ ████ ███████████。";
             if (badEnd)
             {
                 if (destroyed <= 0) return "指が止まった。ここまでだった。";

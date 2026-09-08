@@ -59,6 +59,8 @@ namespace L8000
             if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", "描画", ShowNoise);
             if (r.Contains("localization")) Fire("garble", "翻訳", () => CreditLineBuilder.Garble = true);
             if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", "UI", () => hud?.Kill());
+            if (r.Contains("lighting")) Fire("light", "照明", () => ScreenFx.Vignette(0.4f, 2f));
+            if (r.Contains("writer") || r.Contains("script editor")) Fire("writing", "言葉", () => Finale.WritingBroken = true);
             if (role == "Producer") Fire("producer", "進行管理", () =>
             {
                 if (GameState.Instance != null) GameState.Instance.spendMultiplier = 1.5f;

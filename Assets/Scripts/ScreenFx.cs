@@ -16,14 +16,16 @@ namespace L8000
         public TextMeshProUGUI toast;
         public TextMeshProUGUI banner;   // 画面下の常時表示(降下中「▼ もどっている」など)
         public Image flash;
+        public Image vignette;           // Lighting 破壊で画面が暗くなる
 
-        Coroutine _toastCo, _flashCo, _bannerCo;
+        Coroutine _toastCo, _flashCo, _bannerCo, _vigCo;
 
         void Awake()
         {
             Instance = this;
             if (toast != null) { var c = toast.color; c.a = 0f; toast.color = c; }
             if (banner != null) { var c = banner.color; c.a = 0f; banner.color = c; }
+            if (vignette != null) { var c = vignette.color; c.a = 0f; vignette.color = c; vignette.gameObject.SetActive(true); }
             if (flash != null) { var c = flash.color; c.a = 0f; flash.color = c; flash.gameObject.SetActive(true); }
         }
 
@@ -72,6 +74,27 @@ namespace L8000
         }
 
         void SetFlashA(Color c, float a) { c.a = Mathf.Clamp01(a); flash.color = c; }
+
+        /// <summary>画面を暗くする(Lighting 破壊)。0で戻す。</summary>
+        public static void Vignette(float alpha, float dur = 1.5f)
+        {
+            var s = Instance;
+            if (s == null || s.vignette == null) return;
+            if (s._vigCo != null) s.StopCoroutine(s._vigCo);
+            s._vigCo = s.StartCoroutine(s.VignetteCo(alpha, dur));
+        }
+
+        IEnumerator VignetteCo(float target, float dur)
+        {
+            float from = vignette.color.a, t = 0f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                var c = vignette.color; c.a = Mathf.Lerp(from, target, t / dur); vignette.color = c;
+                yield return null;
+            }
+            var cc = vignette.color; cc.a = target; vignette.color = cc;
+        }
 
         /// <summary>画面下に常時表示。null/空 で消す。</summary>
         public static void Banner(string msg, Color color)
