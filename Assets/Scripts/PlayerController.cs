@@ -15,7 +15,8 @@ namespace L8000
         public float airAccel = 35f;
 
         [Header("ジャンプ")]
-        public float jumpForce = 14f;
+        [Tooltip("到達高 ≈ jumpForce^2 / (2 * 9.81 * gravityScale)。maxLineGap の約1.2倍が目安。")]
+        public float jumpForce = 10.5f;
         public float gravityScale = 3.0f;
         public float fallGravityMult = 1.4f;
         [Tooltip("ジャンプ中にキーを離すと落下を早める倍率。1で無効(タップでもフル高さ)。")]

@@ -38,6 +38,7 @@ namespace L8000
         int _usedSegs;
 
         Rigidbody2D _body;
+        CompositeCollider2D _composite;
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
@@ -53,9 +54,20 @@ namespace L8000
             _body.bodyType = RigidbodyType2D.Kinematic;
             _body.simulated = true;
 
-            // すべてソリッド(下からも横からも抜けられない)。one-way 効果は使わない。
+            // すべてソリッド。文字ごとの箱を1枚に融合して継ぎ目に引っかからないようにする。
+            _composite = GetComponent<CompositeCollider2D>();
+            if (_composite == null) _composite = gameObject.AddComponent<CompositeCollider2D>();
+            _composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+            _composite.generationType = CompositeCollider2D.GenerationType.Manual;
+            _composite.offsetDistance = 0.01f;
+
             var eff = GetComponent<PlatformEffector2D>();
             if (eff != null) eff.enabled = false;
+        }
+
+        void RegenCollision()
+        {
+            if (_composite != null) _composite.GenerateGeometry();
         }
 
         public void Configure(LineSpec spec)
@@ -75,6 +87,7 @@ namespace L8000
             {
                 BuildRule();
                 HideUnused();
+                RegenCollision();
                 return;
             }
 
@@ -96,6 +109,7 @@ namespace L8000
             }
 
             HideUnused();
+            RegenCollision();
         }
 
         public void Release()
@@ -131,13 +145,16 @@ namespace L8000
                     int ci = s.boxChar[b];
                     if (ci < 0 || ci >= s.destroyed.Length || s.destroyed[ci]) continue; // 床(-1)等は壊さない
 
-                    Bounds bd = col.bounds;
-                    if (bd.Contains(new Vector3(world.x, world.y, bd.center.z)))
+                    // 行GOは無回転・無スケールなので offset+size から world AABB を直接出す
+                    Vector2 c = (Vector2)transform.position + col.offset;
+                    Vector2 half = col.size * 0.5f;
+                    Vector2 dv = new Vector2(Mathf.Abs(world.x - c.x) - half.x, Mathf.Abs(world.y - c.y) - half.y);
+                    if (dv.x <= 0f && dv.y <= 0f)
                     {
                         hitSeg = s; hitChar = ci; best = 0f;
                         break;
                     }
-                    float d = ((Vector2)bd.center - world).sqrMagnitude;
+                    float d = ((c - world)).sqrMagnitude;
                     if (d < best) { best = d; hitSeg = s; hitChar = ci; }
                 }
                 if (best == 0f) break;
@@ -146,6 +163,7 @@ namespace L8000
             if (hitSeg == null || hitChar < 0 || best > 1.0f) return false;
             hitSeg.destroyed[hitChar] = true;
             RenderSeg(hitSeg);
+            RegenCollision();
             TotalCharsDestroyed++;
             return true;
         }
@@ -196,6 +214,7 @@ namespace L8000
             var box = GetBox(seg);
             box.enabled = true;
             box.isTrigger = false;
+            box.usedByComposite = true;
             box.offset = new Vector2(0f, _layout.colliderYOffset);
             box.size = new Vector2(240f, Mathf.Max(0.1f, cell * chr));
             seg.boxChar[seg.usedBoxes - 1] = -1;
@@ -302,6 +321,7 @@ namespace L8000
                 BoxCollider2D box = GetBox(seg);
                 box.enabled = true;
                 box.isTrigger = false;
+                box.usedByComposite = true;
                 box.offset = new Vector2((x0 + x1) * 0.5f, _layout.colliderYOffset);
                 box.size = new Vector2(Mathf.Max(0.03f, w), Mathf.Max(0.1f, colliderH));
                 seg.boxChar[seg.usedBoxes - 1] = i;
@@ -336,6 +356,7 @@ namespace L8000
                 return seg.boxes[seg.usedBoxes - 1];
             }
             var box = gameObject.AddComponent<BoxCollider2D>();
+            box.usedByComposite = true;
             seg.boxes.Add(box);
             seg.boxChar.Add(0);
             seg.usedBoxes++;

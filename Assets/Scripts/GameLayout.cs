@@ -76,8 +76,8 @@ namespace L8000
         [Tooltip("コライダの縦位置オフセット(world units)。+で上へ。")]
         public float colliderYOffset = 0f;
 
-        [Tooltip("1文字あたりのコライダ幅の比率(送り幅に対して)。1で隙間なく密着、<1で文字間に細い隙間。")]
-        [Range(0.5f, 1f)] public float charColliderWidthRatio = 0.82f;
+        [Tooltip("1文字あたりのコライダ幅の比率(送り幅に対して)。1推奨(隙間なく密着 → CompositeCollider2D で滑らかな1枚に融合)。")]
+        [Range(0.5f, 1f)] public float charColliderWidthRatio = 1f;
 
         // --- 便利プロパティ -------------------------------------------------
         public float CellWidth(bool wide) => wide ? fullCellWidth : halfCellWidth;

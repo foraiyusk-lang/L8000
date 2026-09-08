@@ -509,7 +509,8 @@ namespace L8000.EditorTools
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             var col = playerGo.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(PlayerW, PlayerH);
+            col.size = new Vector2(PlayerW - 0.06f, PlayerH - 0.06f);
+            col.edgeRadius = 0.03f;   // 角を少し丸めて足場の継ぎ目に引っかからないように
             // 壁に張り付かないよう摩擦低め
             col.sharedMaterial = new PhysicsMaterial2D("PlayerLowFriction") { friction = 0.05f, bounciness = 0f };
 
