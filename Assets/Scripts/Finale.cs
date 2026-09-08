@@ -55,14 +55,16 @@ namespace L8000
             if (vr != null) vr.Stop();
             if (streamer != null) streamer.gameObject.SetActive(false);
 
-            float cx = viewCamera != null ? viewCamera.transform.position.x : 0f;
-            float cy = viewCamera != null ? viewCamera.transform.position.y : 0f;
+            // カメラとプレイヤーを原点にそろえる(決め打ち)
+            var cf = viewCamera != null ? viewCamera.GetComponent<CameraFollow>() : null;
+            if (cf != null) cf.enabled = false;
+            if (viewCamera != null) viewCamera.transform.position = new Vector3(0f, 0f, -10f);
 
             var pc = player != null ? player.GetComponent<PlayerController>() : null;
             if (pc != null) pc.enabled = false;
             var prb = player != null ? player.GetComponent<Rigidbody2D>() : null;
             if (prb != null) { prb.bodyType = RigidbodyType2D.Kinematic; prb.linearVelocity = Vector2.zero; }
-            if (player != null) player.position = new Vector3(cx, cy - 0.6f, 0f);
+            if (player != null) player.position = new Vector3(0f, -0.4f, 0f);
 
             // 暗転を戻す(カメラの黒背景 + プレイヤーだけが見える)
             if (blackout != null) yield return Fade(blackout, 1f, 0f, 0.8f);
@@ -74,17 +76,17 @@ namespace L8000
             {
                 worldText.gameObject.SetActive(true);
                 string branch = EndSequence_FinalLine(badEnd, CreditLineBuilder.TotalCharsDestroyed);
-                worldText.text = $"PLAYED BY\n\n{PlayerName.Display}\n\n\n<size=60%>{branch}</size>";
+                worldText.text = $"PLAYED BY\n\n{PlayerName.Display}\n\n\n<size=55%>{branch}</size>";
                 worldText.ForceMeshUpdate();
 
                 float halfH = viewCamera != null ? viewCamera.orthographicSize : 5f;
                 float textH = worldText.bounds.size.y;
-                float y = cy - halfH - textH * 0.6f;
-                float endY = cy + halfH + textH * 0.7f;
+                float y = -halfH - textH * 0.6f;
+                float endY = halfH + textH * 0.7f;
                 while (y < endY)
                 {
                     y += scrollSpeed * Time.deltaTime;
-                    worldText.transform.position = new Vector3(cx, y, 0f);
+                    worldText.transform.position = new Vector3(0f, y, 0f);
                     yield return null;
                 }
             }
