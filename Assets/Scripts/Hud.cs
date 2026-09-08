@@ -13,19 +13,32 @@ namespace L8000
         public string format = "残り {0}";
 
         bool _killed;
+        int _last = -1;
+        Color _baseColor;
+        float _flash;
 
         void OnEnable()
         {
             GameState.OnChanged += Refresh;
-            if (GameState.Instance != null) Refresh(GameState.Instance.Remaining);
+            if (label != null) _baseColor = label.color;
+            if (GameState.Instance != null) { _last = GameState.Instance.Remaining; Refresh(_last); }
         }
 
         void OnDisable() => GameState.OnChanged -= Refresh;
+
+        void Update()
+        {
+            if (_killed || label == null || _flash <= 0f) return;
+            _flash = Mathf.Max(0f, _flash - Time.deltaTime * 2f);
+            label.color = Color.Lerp(_baseColor, new Color(1f, 0.5f, 0.45f), _flash);
+        }
 
         void Refresh(int remaining)
         {
             if (_killed || label == null) return;
             label.text = string.Format(format, remaining);
+            if (_last >= 0 && _last - remaining >= 25) _flash = 1f;   // 大きく減ったら赤く点滅(無に捕まった等)
+            _last = remaining;
         }
 
         /// <summary>UI 担当破壊 → 残り回数表示を永久に消す。</summary>
