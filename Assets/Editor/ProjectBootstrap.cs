@@ -54,8 +54,9 @@ namespace L8000.EditorTools
         static int _capPhase;   // 0=移動/待機, 1=連射, 2=撮影待ち
         static int _capPhaseFrame;
         static double _capLastLog;
-        static float _capMarkX = -999f, _capPeakY = -999f, _capBaseY = -999f;
-        static bool _capJumpInit, _capMidInit;
+        static float _capMarkX = -999f, _capPeakY = -999f, _capBaseY = -999f, _capDblPeak = -999f;
+        static bool _capJumpInit, _capMidInit, _capDblArmed, _capJumpDone; static int _capJumpFrame;
+        static double _capT1;
         static float _layoutMaxGap;
 
         public static void PlayCapture()
@@ -81,8 +82,8 @@ namespace L8000.EditorTools
             _capPhase = 0;
             _capPhaseFrame = 0;
             _capLastLog = 0;
-            _capMarkX = -999f; _capPeakY = -999f; _capBaseY = -999f;
-            _capJumpInit = false; _capMidInit = false;
+            _capMarkX = -999f; _capPeakY = -999f; _capBaseY = -999f; _capDblPeak = -999f;
+            _capJumpInit = false; _capMidInit = false; _capDblArmed = false; _capJumpDone = false; _capJumpFrame = 0;
             var lay = AssetDatabase.LoadAssetAtPath<GameLayout>(LayoutPath);
             _layoutMaxGap = lay != null ? lay.maxLineGap : 0f;
             EditorApplication.update += CapUpdate;
@@ -140,33 +141,41 @@ namespace L8000.EditorTools
                             $"vx={pc.Velocity.x:0.0} grounded={pc.IsGrounded} 進んだ距離={pc.transform.position.x - (_capMarkX < -900f ? pc.transform.position.x : _capMarkX):0.0}");
                     }
                 }
-                // B: 天井のない所へワープしてジャンプ高計測
-                else if (t < 11.0)
+                // B: タイトルの上(天井なし)で 単ジャンプ→2段ジャンプ の高さ計測
+                else if (!_capJumpDone)
                 {
                     PlayerController.DebugAutoWalk = 0;
                     if (!_capJumpInit && pc != null)
                     {
-                        _capJumpInit = true;
-                        // ロール頂上(タイトルの上、天井なし)へ
-                        TeleportPlayer(pc, 0f, topY + 0.6f);
-                        _capBaseY = -999f; _capPeakY = -999f;
+                        _capJumpInit = true; _capJumpFrame = 0;
+                        TeleportPlayer(pc, 0f, topY + 0.9f);
+                        _capBaseY = -999f; _capPeakY = -999f; _capDblPeak = -999f;
                     }
-                    PlayerController.DebugAutoClimb = true;
+                    _capJumpFrame++;
                     if (pc != null)
                     {
                         if (pc.IsGrounded && _capBaseY < -900f) _capBaseY = pc.transform.position.y;
-                        if (_capBaseY > -900f && pc.transform.position.y > _capPeakY) _capPeakY = pc.transform.position.y;
+                        if (_capJumpFrame == 90) PlayerController.DebugForceJump = true;              // 1段目
+                        if (_capJumpFrame == 150) { PlayerController.DebugForceJump = true; _capDblArmed = true; } // 2段目
+                        if (_capBaseY > -900f && _capJumpFrame > 90)
+                        {
+                            float py = pc.transform.position.y;
+                            if (!_capDblArmed) { if (py > _capPeakY) _capPeakY = py; }
+                            else if (py > _capDblPeak) _capDblPeak = py;
+                        }
+                        if (_capJumpFrame > 320) _capJumpDone = true;
                     }
                 }
                 // C: 中央へワープして自動スクロール開始を確認
-                else if (t < 15.0)
+                else if (t < 17.0)
                 {
                     PlayerController.DebugAutoClimb = false;
                     if (!_capMidInit)
                     {
                         _capMidInit = true;
                         if (_capBaseY > -900f)
-                            Log($"jump apex ≈ {_capPeakY - _capBaseY:0.00}  (base {_capBaseY:0.0} peak {_capPeakY:0.0}) / maxLineGap={_layoutMaxGap:0.00}");
+                            Log($"jump: 単={_capPeakY - _capBaseY:0.00}  2段合計={_capDblPeak - _capBaseY:0.00}  " +
+                                $"(base {_capBaseY:0.0}) / maxLineGap={_layoutMaxGap:0.00}  比={(_capPeakY - _capBaseY) / Mathf.Max(0.01f, _layoutMaxGap):0.00}");
                         if (rb0 != null) rb0.simulated = false;
                         if (pc != null) TeleportPlayer(pc, 0f, topY * 0.55f);
                     }

@@ -27,23 +27,23 @@ namespace L8000
 
         [Header("行の縦間隔")]
         [Tooltip("クレジット1エントリごとの基本の縦送り(world units)。")]
-        public float lineStepY = 1.05f;
+        public float lineStepY = 1.6f;
 
         [Tooltip("空行 1つあたりの追加の縦送り(world units)。")]
-        public float blankLineGap = 0.34f;
+        public float blankLineGap = 0.4f;
 
         [Tooltip("見出し(#)の前後に足す余白(world units)。")]
-        public float headerPad = 0.28f;
+        public float headerPad = 0.35f;
 
         [Tooltip("[gap N] 1単位あたりの縦送り(world units)。")]
-        public float gapUnit = 0.42f;
+        public float gapUnit = 0.5f;
 
         [Tooltip("連続する足場の最大の縦間隔(world units)。ジャンプ到達高より必ず小さく。" +
                  "credits.txt に大きな [gap] があってもここで頭打ちにして『必ず登れる』を保証する。")]
-        public float maxLineGap = 1.5f;
+        public float maxLineGap = 1.85f;
 
-        [Tooltip("連続する足場の最小の縦間隔(world units)。足場が重ならないように。")]
-        public float minLineGap = 0.95f;
+        [Tooltip("連続する足場の最小の縦間隔(world units)。詰めすぎ防止。文章が一続きでもこの行間は空く。")]
+        public float minLineGap = 1.5f;
 
         [Header("役割 :: 名前 の2カラム")]
         [Tooltip("中央線から役割/名前をどれだけ離すか(world units)。役割と名前の間の隙間になる。")]

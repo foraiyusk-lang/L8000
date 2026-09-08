@@ -3,22 +3,30 @@ using UnityEngine;
 namespace L8000
 {
     /// <summary>
-    /// 白い正方形。A=左 / D=右 / W=ジャンプ / Enter=発射(今回はフックのみ)。
-    /// one-way 足場の上に着地でき、下からはすり抜けて上の行に乗れる。
+    /// 白い正方形。A=左 / D=右 / W=ジャンプ(2段可) / Enter=発射(Weapon が担当)。
+    /// すべての足場はソリッド。空白の隙間を縫って登る。
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour
     {
         [Header("移動")]
-        public float moveSpeed = 6.5f;
-        public float groundAccel = 70f;
-        public float airAccel = 35f;
+        [Tooltip("最高速度。小さいほど微調整しやすい。")]
+        public float moveSpeed = 4.2f;
+        [Tooltip("加速。小さいほどタップで少しだけ動く。")]
+        public float groundAccel = 40f;
+        public float airAccel = 26f;
+        [Tooltip("キーを離したときの減速。大きいほどピタッと止まる。")]
+        public float groundDecel = 55f;
 
         [Header("ジャンプ")]
-        [Tooltip("到達高 ≈ jumpForce^2 / (2 * 9.81 * gravityScale)。maxLineGap の約1.2倍が目安。")]
-        public float jumpForce = 10.5f;
+        [Tooltip("到達高 ≈ jumpForce^2 / (2 * 9.81 * gravityScale)。maxLineGap の約1.2〜1.3倍が目安。")]
+        public float jumpForce = 12f;
+        [Tooltip("空中ジャンプ(2段目)の強さ倍率。")]
+        public float airJumpMult = 0.92f;
+        [Tooltip("地上を含めた最大ジャンプ回数。2 = 2段ジャンプ。")]
+        public int maxJumps = 2;
         public float gravityScale = 3.0f;
-        public float fallGravityMult = 1.4f;
+        public float fallGravityMult = 1.45f;
         [Tooltip("ジャンプ中にキーを離すと落下を早める倍率。1で無効(タップでもフル高さ)。")]
         public float lowJumpMult = 1.0f;
         public float maxFallSpeed = 18f;
@@ -34,30 +42,30 @@ namespace L8000
         public KeyCode leftKey = KeyCode.A;
         public KeyCode rightKey = KeyCode.D;
         public KeyCode jumpKey = KeyCode.W;
-        // 発射(Enter)は Weapon コンポーネントが担当
 
-        /// <summary>検証用: true の間、接地するたびに自動でジャンプし続ける(登り続ける)。</summary>
+        /// <summary>検証用: true の間、接地するたびに自動でジャンプし続ける。</summary>
         public static bool DebugAutoClimb;
-
         /// <summary>検証用: -1/0/1 で左右入力を上書き。</summary>
         public static int DebugAutoWalk;
+        /// <summary>検証用: 1フレームだけジャンプ入力を発生させる(空中でも)。</summary>
+        public static bool DebugForceJump;
 
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
+        public bool IsGrounded => _grounded;
 
         Rigidbody2D _rb;
         bool _grounded;
         float _coyote;
         float _buffer;
         float _autoClimbCd;
-
-        public bool IsGrounded => _grounded;
+        int _jumpsLeft;
 
         void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
             _rb.freezeRotation = true;
             _rb.gravityScale = gravityScale;
-            _rb.sleepMode = RigidbodySleepMode2D.NeverSleep;   // 停止中にスリープ → 入力で起きない、を防ぐ
+            _rb.sleepMode = RigidbodySleepMode2D.NeverSleep;   // 停止中スリープ → 入力で起きない、を防ぐ
             if (groundMask.value == 0)
             {
                 int g = LayerMask.NameToLayer("Ground");
@@ -68,8 +76,8 @@ namespace L8000
         void Update()
         {
             if (Input.GetKeyDown(jumpKey)) _buffer = jumpBuffer;
+            if (DebugForceJump) { _buffer = jumpBuffer; DebugForceJump = false; }
 
-            // 検証用オートクライム: 接地して落ち着いてから1回だけジャンプ(人間の操作に近づける)
             _autoClimbCd = Mathf.Max(0f, _autoClimbCd - Time.deltaTime);
             if (DebugAutoClimb && _grounded && _autoClimbCd <= 0f)
             {
@@ -84,24 +92,31 @@ namespace L8000
 
             Vector2 checkPos = (Vector2)transform.position + new Vector2(0f, groundCheckOffsetY);
             Collider2D hit = Physics2D.OverlapBox(checkPos, groundCheckSize, 0f, groundMask);
-            // 上昇中は接地とみなさない → 空中連続ジャンプを防ぐ
             _grounded = hit != null && _rb.linearVelocity.y <= 0.1f;
 
             _coyote = _grounded ? coyoteTime : Mathf.Max(0f, _coyote - dt);
             _buffer = Mathf.Max(0f, _buffer - dt);
+            if (_grounded) _jumpsLeft = maxJumps;
 
+            // --- 横移動: 入力中は accel、離したら decel でピタッと ---
             float dir = (Input.GetKey(rightKey) ? 1f : 0f) - (Input.GetKey(leftKey) ? 1f : 0f);
             if (DebugAutoWalk != 0) dir = DebugAutoWalk;
             float targetX = dir * moveSpeed;
-            float accel = _grounded ? groundAccel : airAccel;
-            float vx = Mathf.MoveTowards(_rb.linearVelocity.x, targetX, accel * dt);
+            float rate = Mathf.Abs(dir) > 0.01f ? (_grounded ? groundAccel : airAccel)
+                                                : (_grounded ? groundDecel : airAccel);
+            float vx = Mathf.MoveTowards(_rb.linearVelocity.x, targetX, rate * dt);
             float vy = _rb.linearVelocity.y;
 
-            if (_buffer > 0f && _coyote > 0f)
+            // --- ジャンプ(地上 + 空中2段目) ---
+            bool wantJump = _buffer > 0f;
+            bool canGroundJump = _coyote > 0f;
+            bool canAirJump = !canGroundJump && _jumpsLeft > 0 && !_grounded;
+            if (wantJump && (canGroundJump || canAirJump))
             {
-                vy = jumpForce;
+                vy = canAirJump ? jumpForce * airJumpMult : jumpForce;
                 _buffer = 0f;
                 _coyote = 0f;
+                _jumpsLeft = Mathf.Max(0, _jumpsLeft - 1);
             }
 
             float g = Physics2D.gravity.y * gravityScale;
