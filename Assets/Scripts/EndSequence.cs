@@ -112,13 +112,21 @@ namespace L8000
             return sb.ToString();
         }
 
-        /// <summary>破壊数で分岐する最後の1行(暫定。アウトロで上書きされうる)。</summary>
+        /// <summary>頂上に到達してからのアウトロか(false = 残り0で飲まれた)。</summary>
+        public static bool ReachedTop;
+
+        /// <summary>破壊数(と到達経路)で分岐する最後の1行。</summary>
         public static string FinalLine(int destroyed)
         {
-            if (destroyed <= 0) return "だれも消さずに、ここまで来た。";
+            if (!ReachedTop)
+            {
+                if (destroyed <= 0) return "指が止まった。ここまでだった。";
+                return "動けなくなって、名前ごと沈んだ。";
+            }
+            if (destroyed <= 0) return "だれも消さずに、てっぺんまで来た。";
             if (destroyed < 20) return "いくつかの名前は、もう戻らない。";
             if (destroyed < 80) return "多くの名前が、無くなった。";
-            return "ほとんど、何も残らなかった。";
+            return "ほとんど、何も残らなかった。それでも、登りきった。";
         }
     }
 }

@@ -32,6 +32,12 @@ namespace L8000
             Application.runInBackground = true;   // エディタ非フォーカスでも進行(MCP 検証用)
             Remaining = Mathf.Max(0, startingActions);
             Depleted = Remaining == 0;
+
+            // ドメインリロードを切っている検証時に前回の static が残らないよう明示リセット
+            CreditLineBuilder.TotalCharsDestroyed = 0;
+            CreditLineBuilder.Garble = false;
+            PlayerController.PhysicsAnomaly = false;
+            EndSequence.ReachedTop = false;
         }
 
         void Start() => OnChanged?.Invoke(Remaining);

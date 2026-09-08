@@ -705,6 +705,15 @@ namespace L8000.EditorTools
             sabotage.hud = hud;
             sabotage.graphicsNoise = noise;
 
+            // --- アウトロ(頂上タイトル接触 → 降下 → 無と合流) ----
+            var outro = stateGo.AddComponent<OutroSequence>();
+            outro.player = playerGo.transform;
+            outro.playerController = pc;
+            outro.cameraFollow = follow;
+            outro.viewCamera = cam;
+            outro.streamer = streamer;
+            outro.voidRiser = voidRiser;
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);
