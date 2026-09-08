@@ -211,4 +211,8 @@ Null Interactive
 
 [gap 1]
 
-Thank you for playing.
+@THANKYOUFORPLAYING
+
+[gap 0.6]
+
+======================================================

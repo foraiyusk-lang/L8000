@@ -13,12 +13,12 @@ namespace L8000
         public TMP_FontAsset font;
 
         [Header("弾")]
-        public float bulletSpeed = 24f;
-        public float fireCooldown = 0.16f;
-        public float bulletMaxRange = 46f;
-        public float bulletColliderRadius = 0.11f;
-        public float bulletVisualHeight = 0.22f;
-        public float muzzleOffsetY = 0.4f;
+        public float bulletSpeed = 9f;
+        public float fireCooldown = 0.22f;
+        public float bulletMaxRange = 40f;
+        public float bulletColliderRadius = 0.16f;
+        public float bulletVisualHeight = 0.42f;
+        public float muzzleOffsetY = 0.35f;
 
         /// <summary>検証用: true の間、自動で撃ち続ける。</summary>
         public static bool DebugAutoFire;

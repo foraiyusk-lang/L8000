@@ -98,21 +98,33 @@ namespace L8000.EditorTools
 
             bool done = false;
 
-            // --- Stage 0: 自動スクロールを観察(follow 有効のまま。文字サイズ確認も) ---
+            // --- Stage 0: スタート足場に乗せて開始トリガ確認 → 自動スクロール観察 ---
             if (_capStage == 0)
             {
                 _capPhaseFrame++;
-                double now0 = EditorApplication.timeSinceStartup;
-                if (now0 - _capLastLog > 1.0)
+                var streamer0 = UnityEngine.Object.FindFirstObjectByType<RollStreamer>();
+                float startY = 0f;
+                if (streamer0 != null && streamer0.Roll != null)
+                    foreach (var l in streamer0.Roll.Lines) if (l.IsStart) { startY = l.WorldY; break; }
+
+                if (_capPhaseFrame >= 40 && _capPhaseFrame <= 70 && pc != null)
                 {
-                    _capLastLog = now0;
-                    Log($"scroll: camY={(cam != null ? cam.transform.position.y : 0f):0.00} frame={_capFrame}");
+                    // @THANKYOUFORPLAYING の真上に置いて自然に着地させる(30フレーム押さえる)
+                    pc.transform.position = new Vector3(0f, startY + 0.35f, 0f);
+                    var rb0 = pc.GetComponent<Rigidbody2D>();
+                    if (rb0 != null) rb0.linearVelocity = new Vector2(0f, -0.5f);
                 }
-                if (_capPhaseFrame == 40) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll0.png");
-                if (_capPhaseFrame > 300)
+
+                if (_capPhaseFrame % 45 == 0)
+                    Log($"stage0 f{_capPhaseFrame}: playerY={(pc != null ? pc.transform.position.y : 0):0.00} " +
+                        $"grounded={(pc != null && pc.IsGrounded)} started={(follow != null && follow.Started)} " +
+                        $"camY={(cam != null ? cam.transform.position.y : 0f):0.00}");
+                if (_capPhaseFrame == 130) CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll0.png");
+
+                if (_capPhaseFrame > 360)
                 {
                     CaptureCameraTo(Path.ChangeExtension(_capOut, null) + "_scroll1.png");
-                    Log($"scroll watch done. camY moved to {(cam != null ? cam.transform.position.y : 0f):0.0}");
+                    Log($"stage0 done. started={(follow != null && follow.Started)} camY={(cam != null ? cam.transform.position.y : 0f):0.0}");
                     _capStage = 1;
                     _capPhaseFrame = 0;
                 }
@@ -512,10 +524,11 @@ namespace L8000.EditorTools
             // --- 武器(Enter で「・」発射) ---------------------------
             var weapon = playerGo.AddComponent<Weapon>();
             weapon.font = font;
-            weapon.bulletColliderRadius = 0.08f;
-            weapon.bulletVisualHeight = 0.16f;
-            weapon.bulletSpeed = 20f;
-            weapon.muzzleOffsetY = PlayerH * 0.5f + 0.06f;
+            weapon.bulletColliderRadius = 0.16f;
+            weapon.bulletVisualHeight = 0.42f;
+            weapon.bulletSpeed = 9f;
+            weapon.fireCooldown = 0.22f;
+            weapon.muzzleOffsetY = PlayerH * 0.5f + 0.1f;
 
             streamer.player = playerGo.transform;
 

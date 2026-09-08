@@ -35,9 +35,9 @@ namespace L8000
             _tmp.fontSize = 32f;
             _tmp.richText = false;
             _tmp.alignment = TextAlignmentOptions.Midline;
-            _tmp.color = new Color(1f, 0.95f, 0.55f);
-            _tmp.text = "・";
-            _tmp.sortingOrder = 12;
+            _tmp.color = new Color(1f, 0.85f, 0.2f);   // 明るい黄色でよく見えるように
+            _tmp.text = "●";                            // 「・」の視認版(丸い点)
+            _tmp.sortingOrder = 30;
             _tmp.ForceMeshUpdate();
 
             float h = visualHeight;

@@ -38,6 +38,8 @@ namespace L8000
         int _usedSegs;
 
         Rigidbody2D _body;
+        PlatformEffector2D _effector;
+        bool _oneWay;
 
         public LineSpec Spec { get; private set; }
         public bool Active { get; private set; }
@@ -52,6 +54,14 @@ namespace L8000
             if (_body == null) _body = gameObject.AddComponent<Rigidbody2D>();
             _body.bodyType = RigidbodyType2D.Kinematic;
             _body.simulated = true;
+
+            // 常時 enabled。個々のコライダの usedByEffector で solid / one-way を切り替える。
+            _effector = GetComponent<PlatformEffector2D>();
+            if (_effector == null) _effector = gameObject.AddComponent<PlatformEffector2D>();
+            _effector.useOneWay = true;
+            _effector.useOneWayGrouping = true;
+            _effector.surfaceArc = 160f;
+            _effector.rotationalOffset = 0f;
         }
 
         public void Configure(LineSpec spec)
@@ -59,6 +69,7 @@ namespace L8000
             Spec = spec;
             Active = true;
             _usedSegs = 0;
+            _oneWay = spec.OneWay;
 
             transform.position = new Vector3(0f, spec.WorldY, 0f);
             gameObject.name = $"Line[{spec.Kind}] y{spec.WorldY:0.0}";
@@ -66,6 +77,13 @@ namespace L8000
             float scale = spec.Kind == LineKind.Title ? _layout.titleScale
                         : spec.Kind == LineKind.Header ? _layout.headerScale
                         : 1f;
+
+            if (spec.Kind == LineKind.Rule)
+            {
+                BuildRule();
+                HideUnused();
+                return;
+            }
 
             if (spec.Kind == LineKind.RoleName)
             {
@@ -118,7 +136,7 @@ namespace L8000
                     var col = s.boxes[b];
                     if (!col.enabled) continue;
                     int ci = s.boxChar[b];
-                    if (s.destroyed[ci]) continue;
+                    if (ci < 0 || ci >= s.destroyed.Length || s.destroyed[ci]) continue; // 床(-1)等は壊さない
 
                     Bounds bd = col.bounds;
                     if (bd.Contains(new Vector3(world.x, world.y, bd.center.z)))
@@ -144,6 +162,52 @@ namespace L8000
 
         // --- 内部 -------------------------------------------------------
         enum Align { Center, LeftFrom, RightTo }
+
+        /// <summary>===== 行: 全幅のソリッドな床。文字ごとの当たり判定は作らず1本の広いコライダ。</summary>
+        void BuildRule()
+        {
+            Seg seg = GetSeg();
+            seg.original = "=";
+            seg.destroyed = new bool[1];
+            seg.scale = 1f;
+            seg.k = 1f;
+            seg.originX = 0f;
+
+            float cell = _layout.cellHeight > 0f ? _layout.cellHeight : 1f;
+            float chr = _layout.colliderHeightRatio > 0f ? _layout.colliderHeightRatio : 0.9f;
+
+            var tmp = seg.tmp;
+            tmp.gameObject.SetActive(true);
+            tmp.font = _font;
+            tmp.color = _layout.dimColor;
+            tmp.richText = true;
+            tmp.enableVertexGradient = false;
+            tmp.alignment = TextAlignmentOptions.Midline;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode = TextOverflowModes.Overflow;
+            tmp.fontSize = RefSize;
+            float mspaceEm = _layout.CellWidth(false) / cell;
+            tmp.text = $"<mspace={mspaceEm:0.####}em>{new string('=', 200)}";
+
+            var rt = tmp.rectTransform;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(400f, 40f);
+            rt.localRotation = Quaternion.identity;
+            rt.localPosition = Vector3.zero;
+            tmp.ForceMeshUpdate();
+            var ti = tmp.textInfo;
+            float refH = (ti.lineCount > 0) ? (ti.lineInfo[0].ascender - ti.lineInfo[0].descender) : RefSize;
+            if (refH <= 0.0001f) refH = RefSize;
+            rt.localScale = Vector3.one * (cell / refH);
+
+            var box = GetBox(seg);
+            box.enabled = true;
+            box.isTrigger = false;
+            box.usedByEffector = _oneWay;
+            box.offset = new Vector2(0f, _layout.colliderYOffset);
+            box.size = new Vector2(240f, Mathf.Max(0.1f, cell * chr));
+            seg.boxChar[seg.usedBoxes - 1] = -1;
+        }
 
         void BuildSeg(string s, Color color, float scale, Align align, float anchorX)
         {
@@ -246,6 +310,7 @@ namespace L8000
                 BoxCollider2D box = GetBox(seg);
                 box.enabled = true;
                 box.isTrigger = false;
+                box.usedByEffector = _oneWay;
                 box.offset = new Vector2((x0 + x1) * 0.5f, _layout.colliderYOffset);
                 box.size = new Vector2(Mathf.Max(0.03f, w), Mathf.Max(0.1f, colliderH));
                 seg.boxChar[seg.usedBoxes - 1] = i;

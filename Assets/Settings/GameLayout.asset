@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: GameLayout
   m_EditorClassIdentifier: Assembly-CSharp::L8000.GameLayout
   cellHeight: 0.68
-  halfCellWidth: 0.36
-  fullCellWidth: 0.72
+  halfCellWidth: 0.52
+  fullCellWidth: 1.04
   lineStepY: 1.05
   blankLineGap: 0.34
   headerPad: 0.28
   gapUnit: 0.42
-  maxLineGap: 1.85
-  minLineGap: 0.9
-  centerGap: 0.28
+  maxLineGap: 1.5
+  minLineGap: 0.95
+  centerGap: 0.45
   nameColor: {r: 1, g: 1, b: 1, a: 1}
   roleColor: {r: 0.72, g: 0.78, b: 0.9, a: 1}
   headerColor: {r: 0.55, g: 0.75, b: 1, a: 1}
@@ -33,4 +33,4 @@ MonoBehaviour:
   maxSpawnPerFrame: 4
   colliderHeightRatio: 0.9
   colliderYOffset: 0
-  charColliderWidthRatio: 1
+  charColliderWidthRatio: 0.82

@@ -19,11 +19,11 @@ namespace L8000
         [Tooltip("1セル高(world units)。小さくすると文字が小さくなる。lineStepY 等も合わせて調整。")]
         public float cellHeight = 0.68f;
 
-        [Tooltip("欧文(半角)1文字の列幅。プレイヤー幅より広いこと(隙間を通れるように)。")]
-        public float halfCellWidth = 0.36f;
+        [Tooltip("欧文(半角)1文字の列幅。空白=隙間の幅にもなる。プレイヤー幅よりしっかり広く。")]
+        public float halfCellWidth = 0.52f;
 
         [Tooltip("CJK/全角1文字の列幅。通常は halfCellWidth の2倍。")]
-        public float fullCellWidth = 0.72f;
+        public float fullCellWidth = 1.04f;
 
         [Header("行の縦間隔")]
         [Tooltip("クレジット1エントリごとの基本の縦送り(world units)。")]
@@ -40,14 +40,14 @@ namespace L8000
 
         [Tooltip("連続する足場の最大の縦間隔(world units)。ジャンプ到達高より必ず小さく。" +
                  "credits.txt に大きな [gap] があってもここで頭打ちにして『必ず登れる』を保証する。")]
-        public float maxLineGap = 1.85f;
+        public float maxLineGap = 1.5f;
 
         [Tooltip("連続する足場の最小の縦間隔(world units)。足場が重ならないように。")]
-        public float minLineGap = 0.9f;
+        public float minLineGap = 0.95f;
 
         [Header("役割 :: 名前 の2カラム")]
         [Tooltip("中央線から役割/名前をどれだけ離すか(world units)。役割と名前の間の隙間になる。")]
-        public float centerGap = 0.28f;
+        public float centerGap = 0.45f;
 
         [Header("色 / スケール")]
         public Color nameColor = Color.white;
@@ -77,7 +77,7 @@ namespace L8000
         public float colliderYOffset = 0f;
 
         [Tooltip("1文字あたりのコライダ幅の比率(送り幅に対して)。1で隙間なく密着、<1で文字間に細い隙間。")]
-        [Range(0.5f, 1f)] public float charColliderWidthRatio = 1f;
+        [Range(0.5f, 1f)] public float charColliderWidthRatio = 0.82f;
 
         // --- 便利プロパティ -------------------------------------------------
         public float CellWidth(bool wide) => wide ? fullCellWidth : halfCellWidth;

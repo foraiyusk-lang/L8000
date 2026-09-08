@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace L8000
 {
-    public enum LineKind { Header, RoleName, Name, Free, Title }
+    public enum LineKind { Header, RoleName, Name, Free, Title, Rule }
 
     /// <summary>1行ぶんのクレジット。WorldY はレイアウト計算で確定する。</summary>
     public class LineSpec
@@ -13,6 +13,8 @@ namespace L8000
         public string Right;  // RoleName の名前。それ以外は null。
         public float WorldY;
         public bool HasCJK;   // 列幅(半角/全角)の切り替え用。行内に CJK があれば true。
+        public bool IsStart;  // この足場に乗ったらゲーム開始(下から迫るのが始まる)。
+        public bool OneWay;   // 下からすり抜けられる(スタート地点の導入用)。
     }
 
     public class CreditsRoll
@@ -35,6 +37,12 @@ namespace L8000
     /// </summary>
     public static class CreditsMarkup
     {
+        static bool IsAllEquals(string s)
+        {
+            foreach (char c in s) if (c != '=') return false;
+            return true;
+        }
+
         enum RawKind { Line, Blank, Gap }
 
         struct Raw
@@ -73,7 +81,20 @@ namespace L8000
                 }
 
                 var spec = new LineSpec();
-                if (trimmed.StartsWith("#"))
+                if (trimmed.Length >= 3 && IsAllEquals(trimmed))
+                {
+                    spec.Kind = LineKind.Rule;    // ===== 全幅の床/仕切り
+                    spec.Left = trimmed;
+                    spec.OneWay = true;
+                }
+                else if (trimmed.StartsWith("@"))
+                {
+                    spec.Kind = LineKind.Name;    // @TEXT = ここに乗るとゲーム開始
+                    spec.Left = trimmed.Substring(1).Trim();
+                    spec.IsStart = true;
+                    spec.OneWay = true;           // 下からすり抜けて乗れる(導入)
+                }
+                else if (trimmed.StartsWith("#"))
                 {
                     spec.Kind = LineKind.Header;
                     spec.Left = trimmed.Substring(1).Trim();

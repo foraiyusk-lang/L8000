@@ -10,7 +10,7 @@ namespace L8000
     {
         public RollStreamer roll;
         public Transform player;
-        public float heightAboveFloor = 0.9f;
+        public float heightAboveFloor = 0.55f;
         public bool spawnSafetyFloor = true;
 
         void Start()

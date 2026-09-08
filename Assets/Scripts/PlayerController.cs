@@ -15,7 +15,7 @@ namespace L8000
         public float airAccel = 35f;
 
         [Header("ジャンプ")]
-        public float jumpForce = 13f;
+        public float jumpForce = 14f;
         public float gravityScale = 3.0f;
         public float fallGravityMult = 1.4f;
         [Tooltip("ジャンプ中にキーを離すと落下を早める倍率。1で無効(タップでもフル高さ)。")]
@@ -38,11 +38,15 @@ namespace L8000
         /// <summary>検証用: true の間、接地するたびに自動でジャンプし続ける(登り続ける)。</summary>
         public static bool DebugAutoClimb;
 
+        /// <summary>IsStart の足場に初めて乗った時に1回だけ発火(ゲーム開始 = 下から迫る開始)。</summary>
+        public static event System.Action StartLineReached;
+
         Rigidbody2D _rb;
         bool _grounded;
         float _coyote;
         float _buffer;
         float _autoClimbCd;
+        bool _startFired;
 
         public bool IsGrounded => _grounded;
 
@@ -76,9 +80,19 @@ namespace L8000
             float dt = Time.fixedDeltaTime;
 
             Vector2 checkPos = (Vector2)transform.position + new Vector2(0f, groundCheckOffsetY);
-            bool overlap = Physics2D.OverlapBox(checkPos, groundCheckSize, 0f, groundMask) != null;
-            // 上昇中(one-way 足場をすり抜けている最中)は接地とみなさない → 空中連続ジャンプを防ぐ
-            _grounded = overlap && _rb.linearVelocity.y <= 0.1f;
+            Collider2D hit = Physics2D.OverlapBox(checkPos, groundCheckSize, 0f, groundMask);
+            // 上昇中は接地とみなさない → 空中連続ジャンプを防ぐ
+            _grounded = hit != null && _rb.linearVelocity.y <= 0.1f;
+
+            if (_grounded && !_startFired && hit != null)
+            {
+                var lb = hit.GetComponentInParent<CreditLineBuilder>();
+                if (lb != null && lb.Spec != null && lb.Spec.IsStart)
+                {
+                    _startFired = true;
+                    StartLineReached?.Invoke();
+                }
+            }
 
             _coyote = _grounded ? coyoteTime : Mathf.Max(0f, _coyote - dt);
             _buffer = Mathf.Max(0f, _buffer - dt);
