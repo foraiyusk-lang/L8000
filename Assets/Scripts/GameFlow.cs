@@ -144,7 +144,7 @@ namespace L8000
             if (clockRoot != null)
             {
                 clockRoot.gameObject.SetActive(true);
-                clockRoot.position = new Vector3(cam.x, cam.y + 0.3f, 0f);
+                clockRoot.position = new Vector3(cam.x, cam.y - 0.4f, 0f);
             }
 
             // 針: 速い逆回転 → 減速 → 12時でスナップ停止
@@ -159,7 +159,7 @@ namespace L8000
                     ang -= spin * Time.deltaTime;                   // 逆回転
                     clockPivot.localRotation = Quaternion.Euler(0, 0, ang);
                     if (clockRoot != null && viewCamera != null)
-                        clockRoot.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y + 0.3f, 0f);
+                        clockRoot.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y - 0.4f, 0f);
                     yield return null;
                 }
                 // 12時(上向き)へなめらかに
