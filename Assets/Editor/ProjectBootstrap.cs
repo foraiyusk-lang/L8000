@@ -906,15 +906,19 @@ namespace L8000.EditorTools
                 typeof(UnityEngine.EventSystems.EventSystem),
                 typeof(UnityEngine.EventSystems.StandaloneInputModule));
 
+            // === なまえ入力ステップ(PLAY を押すと出る。初期は非表示)===
+            var nameStepGo = MakeUI(canvasGo.transform, "NamePanel", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(960, 540));
+            ts.namePanel = nameStepGo.gameObject;
+
             // なまえ ラベル
-            var nameLblGo = MakeUI(canvasGo.transform, "NameLabel", new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(560, 34));
+            var nameLblGo = MakeUI(nameStepGo, "NameLabel", new Vector2(0.5f, 0.5f), new Vector2(0, 44), new Vector2(560, 34));
             var nameLbl = nameLblGo.gameObject.AddComponent<TextMeshProUGUI>();
-            nameLbl.font = font; nameLbl.fontSize = 20f; nameLbl.color = new Color(0.6f, 0.66f, 0.78f);
+            nameLbl.font = font; nameLbl.fontSize = 22f; nameLbl.color = new Color(0.6f, 0.66f, 0.78f);
             nameLbl.alignment = TMPro.TextAlignmentOptions.Center;
             nameLbl.text = "なまえ";
 
             // なまえ入力
-            var nameRow = MakeUI(canvasGo.transform, "NameRow", new Vector2(0.5f, 0.5f), new Vector2(0, -48), new Vector2(520, 54));
+            var nameRow = MakeUI(nameStepGo, "NameRow", new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(520, 56));
             var nameBg = nameRow.gameObject.AddComponent<UnityEngine.UI.Image>();
             nameBg.color = new Color(1f, 1f, 1f, 0.07f);
             var nameField = nameRow.gameObject.AddComponent<TMP_InputField>();
@@ -947,22 +951,36 @@ namespace L8000.EditorTools
             nameField.targetGraphic = nameBg;
             ts.nameField = nameField;
 
-            // PLAY
-            var playGo = MakeUI(canvasGo.transform, "Play", new Vector2(0.5f, 0.5f), new Vector2(0, -140), new Vector2(300, 60));
+            // はじめる ボタン(なまえステップ)
+            var goGo = MakeUI(nameStepGo, "Begin", new Vector2(0.5f, 0.5f), new Vector2(0, -70), new Vector2(240, 52));
+            var goBtn = goGo.gameObject.AddComponent<UnityEngine.UI.Button>();
+            var goImg = goGo.gameObject.AddComponent<UnityEngine.UI.Image>();
+            goImg.color = new Color(0.22f, 0.5f, 0.95f, 0.16f);
+            goBtn.targetGraphic = goImg;
+            var goTxtGo = MakeUI(goGo, "L", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(240, 52));
+            var goTxt = goTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
+            goTxt.font = font; goTxt.fontSize = 24f; goTxt.color = new Color(0.8f, 0.88f, 1f);
+            goTxt.alignment = TMPro.TextAlignmentOptions.Center; goTxt.text = "はじめる";
+            goBtn.onClick.AddListener(ts.Confirm);
+
+            // === タイトルステップ: PLAY ===
+            var playGo = MakeUI(canvasGo.transform, "Play", new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(300, 62));
+            ts.playButton = playGo.gameObject;
             var playBtn = playGo.gameObject.AddComponent<UnityEngine.UI.Button>();
             var playImg = playGo.gameObject.AddComponent<UnityEngine.UI.Image>();
             playImg.color = new Color(0.22f, 0.5f, 0.95f, 0.18f);
             playBtn.targetGraphic = playImg;
-            var playTxtGo = MakeUI(playGo, "Label", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 60));
+            var playTxtGo = MakeUI(playGo, "Label", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 62));
             var playLabel = playTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             playLabel.font = font; playLabel.fontSize = 30f; playLabel.color = new Color(0.8f, 0.88f, 1f);
             playLabel.alignment = TMPro.TextAlignmentOptions.Center;
             playLabel.text = "PLAY";
             ts.playLabel = playLabel;
-            playBtn.onClick.AddListener(ts.Play);
+            playBtn.onClick.AddListener(ts.OpenNameStep);
 
             // 設定ボタン
             var setGo = MakeUI(canvasGo.transform, "SettingsBtn", new Vector2(1f, 1f), new Vector2(-90, -34), new Vector2(140, 44));
+            ts.settingsButton = setGo.gameObject;
             var setBtn = setGo.gameObject.AddComponent<UnityEngine.UI.Button>();
             var setImg = setGo.gameObject.AddComponent<UnityEngine.UI.Image>();
             setImg.color = new Color(1f, 1f, 1f, 0.05f);
@@ -991,12 +1009,14 @@ namespace L8000.EditorTools
             closeTxt.alignment = TMPro.TextAlignmentOptions.Center; closeTxt.text = "とじる";
             closeBtn.onClick.AddListener(ts.ToggleSettings);
 
-            // ヒント
-            var hintGo = MakeUI(canvasGo.transform, "Hint", new Vector2(0.5f, 0.5f), new Vector2(0, -180), new Vector2(600, 40));
+            // ヒント(なまえステップの下)
+            var hintGo = MakeUI(nameStepGo, "Hint", new Vector2(0.5f, 0.5f), new Vector2(0, -120), new Vector2(600, 40));
             var hintTxt = hintGo.gameObject.AddComponent<TextMeshProUGUI>();
             hintTxt.font = font; hintTxt.fontSize = 20f; hintTxt.color = new Color(1f, 0.6f, 0.5f, 0f);
             hintTxt.alignment = TMPro.TextAlignmentOptions.Center;
             ts.hint = hintTxt;
+
+            nameStepGo.gameObject.SetActive(false);   // 初期は非表示(PLAY で出る)
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, TitleScenePath);
