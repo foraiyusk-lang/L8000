@@ -312,26 +312,43 @@ namespace L8000
                 }
             }
 
-            // 連続する可視文字 = 1個の足場コライダ(ラン)
+            // 連続する可視文字 = 1個の足場コライダ(ラン)。中央の『縦の道』はくり抜く。
             seg.usedBoxes = 0;
             float colliderH = ColliderH();
+            float chute = Mathf.Max(0f, _layout.centerChuteHalfWidth);
             int k = 0;
             while (k < seg.chX0.Length)
             {
                 if (!seg.chVis[k]) { k++; continue; }
-                int a = k;
                 float left = seg.chX0[k], right = seg.chX1[k];
                 while (k < seg.chX0.Length && seg.chVis[k]) { right = seg.chX1[k]; k++; }
-
-                var box = GetBox(seg);
-                box.enabled = true;
-                box.isTrigger = false;
-                box.offset = new Vector2((left + right) * 0.5f, _layout.colliderYOffset);
-                box.size = new Vector2(Mathf.Max(0.05f, right - left), Mathf.Max(0.1f, colliderH));
+                AddRunCollider(seg, left, right, colliderH, chute);
             }
 
             for (int b = seg.usedBoxes; b < seg.boxes.Count; b++)
                 seg.boxes[b].enabled = false;
+        }
+
+        /// <summary>ラン[left,right]を足場化。中央 [-chute,+chute] に掛かる場合は左右に分割してくり抜く。</summary>
+        void AddRunCollider(Seg seg, float left, float right, float colliderH, float chute)
+        {
+            if (chute <= 0f || right <= -chute || left >= chute)
+            {
+                EmitBox(seg, left, right, colliderH);
+                return;
+            }
+            if (left < -chute) EmitBox(seg, left, -chute, colliderH);
+            if (right > chute) EmitBox(seg, chute, right, colliderH);
+        }
+
+        void EmitBox(Seg seg, float left, float right, float colliderH)
+        {
+            if (right - left < 0.03f) return;
+            var box = GetBox(seg);
+            box.enabled = true;
+            box.isTrigger = false;
+            box.offset = new Vector2((left + right) * 0.5f, _layout.colliderYOffset);
+            box.size = new Vector2(right - left, Mathf.Max(0.1f, colliderH));
         }
 
         Seg GetSeg()

@@ -18,14 +18,17 @@ namespace L8000
         public float orthoSize = 10f;
 
         [Header("自動スクロール(下から迫る)")]
-        [Tooltip("プレイヤーがロール全高のこの割合まで登ると自動スクロール開始。0.5=中央。")]
-        [Range(0f, 1f)] public float scrollStartFraction = 0.5f;
+        [Tooltip("プレイヤーがロール全高のこの割合まで登ると自動スクロール開始。0.67=2/3地点。")]
+        [Range(0f, 1f)] public float scrollStartFraction = 0.67f;
 
         [Tooltip("上へ流れる速さ(world units/秒)。開始後のみ。")]
-        public float autoScrollSpeed = 0.85f;
+        public float autoScrollSpeed = 0.55f;
 
         [Tooltip("開始条件を満たしてからこの秒数待ってスクロール開始。")]
-        public float startDelay = 0.5f;
+        public float startDelay = 0.6f;
+
+        [Tooltip("プレイヤーを画面下端からこの距離より下には行かせない(取り残され防止)。")]
+        public float keepPlayerAbove = 2f;
 
         [Tooltip("true にすると最初からスクロール(デバッグ用)。")]
         public bool autoStart = false;
@@ -90,16 +93,19 @@ namespace L8000
                     _scrollY += autoScrollSpeed * Time.deltaTime;
             }
 
+            float halfH = _cam.orthographicSize;
             float desired = _scrollY;
             if (target != null)
             {
                 float followY = target.position.y - followAheadOffset;
                 if (followY > desired) desired = followY;
+                // 取り残され防止: プレイヤーが画面下端に近づいたらカメラを引き戻す
+                float minToKeepPlayer = target.position.y + halfH - keepPlayerAbove;
+                if (desired > minToKeepPlayer) desired = minToKeepPlayer;
             }
 
             if (_cam.orthographic && roll != null)
             {
-                float halfH = _cam.orthographicSize;
                 float minCenter = roll.BottomY - bottomPadding + halfH;
                 float maxCenter = roll.TopY + topPadding - halfH;
                 if (maxCenter < minCenter) maxCenter = minCenter;

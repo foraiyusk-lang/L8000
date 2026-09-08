@@ -20,10 +20,10 @@ namespace L8000
         public float cellHeight = 0.68f;
 
         [Tooltip("欧文(半角)1文字の列幅。空白=隙間の幅にもなる。プレイヤー幅よりしっかり広く。")]
-        public float halfCellWidth = 0.52f;
+        public float halfCellWidth = 0.62f;
 
         [Tooltip("CJK/全角1文字の列幅。通常は halfCellWidth の2倍。")]
-        public float fullCellWidth = 1.04f;
+        public float fullCellWidth = 1.24f;
 
         [Header("行の縦間隔")]
         [Tooltip("クレジット1エントリごとの基本の縦送り(world units)。")]
@@ -76,8 +76,11 @@ namespace L8000
         [Tooltip("コライダの縦位置オフセット(world units)。+で上へ。")]
         public float colliderYOffset = 0f;
 
-        [Tooltip("1文字あたりのコライダ幅の比率(送り幅に対して)。1推奨(隙間なく密着 → CompositeCollider2D で滑らかな1枚に融合)。")]
-        [Range(0.5f, 1f)] public float charColliderWidthRatio = 1f;
+        [Tooltip("1文字あたりのコライダ幅の比率(送り幅に対して)。<1 で文字間にも細い隙間。")]
+        [Range(0.5f, 1f)] public float charColliderWidthRatio = 0.85f;
+
+        [Tooltip("中央の『縦の道』の半幅(world units)。全ての行でこの列だけ足場が空く → まっすぐ登れる。0で無効。")]
+        public float centerChuteHalfWidth = 0.42f;
 
         // --- 便利プロパティ -------------------------------------------------
         public float CellWidth(bool wide) => wide ? fullCellWidth : halfCellWidth;

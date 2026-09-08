@@ -19,8 +19,8 @@ namespace L8000
         public float groundDecel = 55f;
 
         [Header("ジャンプ")]
-        [Tooltip("到達高 ≈ jumpForce^2 / (2 * 9.81 * gravityScale)。maxLineGap の約1.2〜1.3倍が目安。")]
-        public float jumpForce = 12f;
+        [Tooltip("到達高 ≈ jumpForce^2 / (2 * 9.81 * gravityScale)。maxLineGap の約1.6倍が目安(易しめ)。")]
+        public float jumpForce = 13.5f;
         [Tooltip("空中ジャンプ(2段目)の強さ倍率。")]
         public float airJumpMult = 0.92f;
         [Tooltip("地上を含めた最大ジャンプ回数。2 = 2段ジャンプ。")]
@@ -30,13 +30,19 @@ namespace L8000
         [Tooltip("ジャンプ中にキーを離すと落下を早める倍率。1で無効(タップでもフル高さ)。")]
         public float lowJumpMult = 1.0f;
         public float maxFallSpeed = 18f;
-        public float coyoteTime = 0.08f;
-        public float jumpBuffer = 0.10f;
+        public float coyoteTime = 0.15f;
+        public float jumpBuffer = 0.18f;
 
         [Header("接地判定")]
         public Vector2 groundCheckSize = new Vector2(0.6f, 0.16f);
         public float groundCheckOffsetY = -0.38f;
         public LayerMask groundMask;
+
+        [Header("縁つかまり救済")]
+        [Tooltip("ジャンプで足場の角にかすったら自動で上に乗る。乗れる段差の上限(world units)。0で無効。")]
+        public float ledgeMountMax = 0.5f;
+        [Tooltip("プレイヤーの当たり判定サイズ(縁つかまり判定に使用)。")]
+        public Vector2 bodySize = new Vector2(0.26f, 0.36f);
 
         [Header("キー")]
         public KeyCode leftKey = KeyCode.A;
@@ -125,6 +131,42 @@ namespace L8000
             vy = Mathf.Max(vy, -maxFallSpeed);
 
             _rb.linearVelocity = new Vector2(vx, vy);
+
+            if (!_grounded && vy < 4f) TryLedgeMount(dir);
+        }
+
+        /// <summary>足場の角に引っかかったら自動で上に乗せる(あと少しで届いたジャンプの救済)。</summary>
+        void TryLedgeMount(float dir)
+        {
+            if (ledgeMountMax <= 0f) return;
+            Vector2 pos = _rb.position;
+            float halfW = bodySize.x * 0.5f;
+            float halfH = bodySize.y * 0.5f;
+            float feetY = pos.y - halfH;
+
+            // 進行方向優先、止まっていれば両側チェック
+            int[] dirs = Mathf.Abs(dir) > 0.1f ? new[] { (int)Mathf.Sign(dir) } : new[] { 1, -1 };
+            foreach (int s in dirs)
+            {
+                Vector2 probe = new Vector2(pos.x + s * (halfW + 0.08f), feetY + ledgeMountMax * 0.5f + 0.02f);
+                var hit = Physics2D.OverlapBox(probe, new Vector2(0.14f, ledgeMountMax + 0.04f), 0f, groundMask);
+                if (hit == null) continue;
+
+                float top = hit.bounds.max.y;
+                float step = top - feetY;
+                if (step <= 0.02f || step > ledgeMountMax) continue;
+
+                // 乗った先にプレイヤーが収まる空きがあるか
+                Vector2 landCenter = new Vector2(pos.x + s * (halfW + 0.05f), top + halfH + 0.03f);
+                if (Physics2D.OverlapBox(landCenter, new Vector2(bodySize.x * 0.85f, bodySize.y * 0.9f), 0f, groundMask) != null)
+                    continue;
+
+                _rb.position = landCenter;
+                _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, 1.2f);
+                _grounded = true;
+                _jumpsLeft = maxJumps;
+                return;
+            }
         }
 
         void OnDrawGizmosSelected()

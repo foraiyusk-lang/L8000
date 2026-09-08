@@ -551,9 +551,9 @@ namespace L8000.EditorTools
             playerGo.transform.position = new Vector3(0f, 2f, 0f);
             // localScale は 1 のまま(スクリプトの接地判定は非スケールの world 距離で計算するため)
 
-            // 細い正方形。文字間のスペース1個分(halfCellWidth=0.36)の隙間を通れるサイズ。
-            const float PlayerW = 0.3f;
-            const float PlayerH = 0.4f;
+            // 細い正方形。文字間のスペース(halfCellWidth) / 中央の縦の道 を通れるサイズ。
+            const float PlayerW = 0.26f;
+            const float PlayerH = 0.36f;
             const float visSprite = 8f / 16f; // white.png 8px @ PPU16 = 0.5 unit
             var vis = new GameObject("Sprite");
             vis.transform.SetParent(playerGo.transform, false);
@@ -578,16 +578,16 @@ namespace L8000.EditorTools
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             var col = playerGo.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(PlayerW - 0.06f, PlayerH - 0.06f);
-            col.edgeRadius = 0.03f;   // 角を少し丸めて足場の継ぎ目に引っかからないように
-            // 壁に張り付かないよう摩擦低め
+            col.size = new Vector2(PlayerW - 0.05f, PlayerH - 0.05f);
+            col.edgeRadius = 0.025f;
             col.sharedMaterial = new PhysicsMaterial2D("PlayerLowFriction") { friction = 0.05f, bounciness = 0f };
 
             var pc = playerGo.AddComponent<PlayerController>();
             int groundLayer = LayerMask.NameToLayer("Ground");
             pc.groundMask = groundLayer >= 0 ? (1 << groundLayer) : Physics2D.AllLayers;
-            pc.groundCheckSize = new Vector2(PlayerW - 0.06f, 0.14f);
+            pc.groundCheckSize = new Vector2(PlayerW - 0.05f, 0.14f);
             pc.groundCheckOffsetY = -(PlayerH * 0.5f + 0.03f);
+            pc.bodySize = new Vector2(PlayerW, PlayerH);
 
             // --- 武器(Enter で「・」発射) ---------------------------
             var weapon = playerGo.AddComponent<Weapon>();
