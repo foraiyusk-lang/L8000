@@ -21,8 +21,8 @@ namespace L8000
         public RollStreamer streamer;
         public VoidRiser voidRiser;
         public Finale finale;
-        public SpriteRenderer dim;     // 巻き戻し中に背景を少し暗く(Clock の子)
-        public Transform clockRoot;    // 時計まるごと(カメラ前へ置く)
+        public UnityEngine.UI.Image dim;  // 巻き戻し中に背景を暗く(Clock の子・HUD Canvas 上)
+        public Transform clockRoot;    // 時計まるごと(HUD Canvas 上・画面中央固定)
         public Transform clockPivot;   // 時計の針(回転させる)
 
         [Header("登り")]
@@ -59,18 +59,18 @@ namespace L8000
             AudioManager.Instance?.SetReversed(true);   // 登り = 逆再生
         }
 
-        static IEnumerator FadeSr(SpriteRenderer sr, float from, float to, float dur)
+        static IEnumerator FadeGraphic(UnityEngine.UI.Graphic g, float from, float to, float dur)
         {
             float e = 0f;
-            var c = sr.color;
-            while (e < dur && sr != null)
+            var c = g.color;
+            while (e < dur && g != null)
             {
                 e += Time.deltaTime;
                 c.a = Mathf.Lerp(from, to, e / dur);
-                sr.color = c;
+                g.color = c;
                 yield return null;
             }
-            if (sr != null) { c.a = to; sr.color = c; }
+            if (g != null) { c.a = to; g.color = c; }
         }
 
         void OnEnable()
@@ -136,16 +136,11 @@ namespace L8000
             ScreenFx.Toast("― 巻き戻しが 止まる ―", new Color(0.85f, 0.9f, 1f), 3.4f);
             AudioManager.Instance?.CrossfadeToForward(2.8f);   // 逆→順(途中で一瞬止まる)
 
-            // 背景を少し暗く(時計を見せる)
-            if (dim != null) StartCoroutine(FadeSr(dim, 0f, 0.62f, 0.5f));
+            // 背景を暗く(時計を見せる。HUD Canvas 上なので確実に前面)
+            if (dim != null) StartCoroutine(FadeGraphic(dim, 0f, 0.78f, 0.5f));
 
-            // 時計をカメラ前に置く
-            var cam = viewCamera != null ? viewCamera.transform.position : Vector3.zero;
-            if (clockRoot != null)
-            {
-                clockRoot.gameObject.SetActive(true);
-                clockRoot.position = new Vector3(cam.x, cam.y - 0.4f, 0f);
-            }
+            // 時計を表示(画面中央固定・追従不要)
+            if (clockRoot != null) clockRoot.gameObject.SetActive(true);
 
             // 針: 速い逆回転 → 減速 → 12時でスナップ停止
             if (clockPivot != null)
@@ -158,8 +153,6 @@ namespace L8000
                     float spin = Mathf.Lerp(720f, 0f, Mathf.SmoothStep(0f, 1f, e / dur));
                     ang -= spin * Time.deltaTime;                   // 逆回転
                     clockPivot.localRotation = Quaternion.Euler(0, 0, ang);
-                    if (clockRoot != null && viewCamera != null)
-                        clockRoot.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y - 0.4f, 0f);
                     yield return null;
                 }
                 // 12時(上向き)へなめらかに
@@ -173,7 +166,7 @@ namespace L8000
             }
 
             ScreenFx.Flash(new Color(1f, 1f, 1f, 0.85f), 0.7f);
-            if (dim != null) StartCoroutine(FadeSr(dim, dim.color.a, 0f, 0.6f));
+            if (dim != null) StartCoroutine(FadeGraphic(dim, dim.color.a, 0f, 0.6f));
             yield return new WaitForSeconds(0.7f);
 
             if (clockRoot != null) clockRoot.gameObject.SetActive(false);

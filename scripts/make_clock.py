@@ -17,6 +17,9 @@ d = ImageDraw.Draw(img)
 c = S / 2
 col = (210, 216, 228, 235)
 
+# 内側の暗い円盤(背後のクレジットが透けないように)
+d.ellipse([7, 7, S - 7, S - 7], fill=(6, 7, 12, 232))
+
 # リング
 d.ellipse([6, 6, S - 6, S - 6], outline=col, width=3)
 

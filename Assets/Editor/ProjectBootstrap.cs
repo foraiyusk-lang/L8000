@@ -666,35 +666,55 @@ namespace L8000.EditorTools
             voidRiser.streamer = streamer;
 
             // --- 時計(巻き戻しが止まる演出) --------------------
+            //  HUD Canvas(ScreenSpaceOverlay)上に置く。ワールドのクレジット文字と
+            //  スプライトのソート順が噛み合わない問題を避け、確実に前面へ。
             var clockFace = EnsureClockSprite();
-            var clockGo = new GameObject("Clock");                 // ルート(GameFlow がカメラ前へ)
+            var clockGo = new GameObject("Clock", typeof(RectTransform));
+            clockGo.transform.SetParent(canvasGo.transform, false);
+            var clockRt = (RectTransform)clockGo.transform;
+            clockRt.anchorMin = clockRt.anchorMax = new Vector2(0.5f, 0.5f);
+            clockRt.pivot = new Vector2(0.5f, 0.5f);
+            clockRt.anchoredPosition = new Vector2(0f, -24f);
+            clockRt.sizeDelta = Vector2.one;
 
-            var clockDimGo = new GameObject("Dim");                // 背景を暗く(時計を見せる)
+            // 背景を暗く(クレジットを沈める。子順で Face/Hand より下)
+            var clockDimGo = new GameObject("Dim", typeof(RectTransform));
             clockDimGo.transform.SetParent(clockGo.transform, false);
-            var clockDimSr = clockDimGo.AddComponent<SpriteRenderer>();
-            clockDimSr.sprite = white;
-            clockDimSr.color = new Color(0f, 0f, 0f, 0f);
-            clockDimSr.sortingOrder = 38;
-            clockDimGo.transform.localScale = new Vector3(120f, 80f, 1f);
+            var clockDim = clockDimGo.AddComponent<UnityEngine.UI.Image>();
+            clockDim.color = new Color(0f, 0f, 0f, 0f);
+            clockDim.raycastTarget = false;
+            var cdrt = clockDim.rectTransform;
+            cdrt.anchorMin = cdrt.anchorMax = new Vector2(0.5f, 0.5f);
+            cdrt.sizeDelta = new Vector2(4000f, 4000f);          // 画面全体を覆う
 
-            var clockFaceGo = new GameObject("Face");
+            // 文字盤
+            var clockFaceGo = new GameObject("Face", typeof(RectTransform));
             clockFaceGo.transform.SetParent(clockGo.transform, false);
-            var clockFaceSr = clockFaceGo.AddComponent<SpriteRenderer>();
-            clockFaceSr.sprite = clockFace;
-            clockFaceSr.color = new Color(1f, 1f, 1f, 0.7f);
-            clockFaceSr.sortingOrder = 40;
-            clockFaceGo.transform.localScale = Vector3.one * (3.4f / 8f);   // clock.png 128px @16ppu = 8u → 直径 3.4u
+            var clockFaceImg = clockFaceGo.AddComponent<UnityEngine.UI.Image>();
+            clockFaceImg.sprite = clockFace;
+            clockFaceImg.color = new Color(1f, 1f, 1f, 0.96f);
+            clockFaceImg.raycastTarget = false;
+            var cfrt = clockFaceImg.rectTransform;
+            cfrt.anchorMin = cfrt.anchorMax = new Vector2(0.5f, 0.5f);
+            cfrt.sizeDelta = new Vector2(216f, 216f);            // 直径 ~216px
 
-            var clockPivotGo = new GameObject("HandPivot");        // これを回す
+            // 針(下端を軸に回す)
+            var clockPivotGo = new GameObject("HandPivot", typeof(RectTransform));
             clockPivotGo.transform.SetParent(clockGo.transform, false);
-            var clockHandGo = new GameObject("Hand");
+            var cprt = (RectTransform)clockPivotGo.transform;
+            cprt.anchorMin = cprt.anchorMax = new Vector2(0.5f, 0.5f);
+            cprt.sizeDelta = Vector2.one;
+            var clockHandGo = new GameObject("Hand", typeof(RectTransform));
             clockHandGo.transform.SetParent(clockPivotGo.transform, false);
-            var clockHandSr = clockHandGo.AddComponent<SpriteRenderer>();
-            clockHandSr.sprite = white;                            // white.png 8px @16ppu = 0.5u
-            clockHandSr.color = new Color(1f, 1f, 1f, 1f);
-            clockHandSr.sortingOrder = 41;
-            clockHandGo.transform.localScale = new Vector3(0.34f, 2.9f, 1f);   // 幅0.17 / 高さ1.45u
-            clockHandGo.transform.localPosition = new Vector3(0f, 0.72f, 0f);  // ピボットから上へ
+            var clockHandImg = clockHandGo.AddComponent<UnityEngine.UI.Image>();
+            clockHandImg.sprite = white;
+            clockHandImg.color = Color.white;
+            clockHandImg.raycastTarget = false;
+            var chrt = clockHandImg.rectTransform;
+            chrt.anchorMin = chrt.anchorMax = new Vector2(0.5f, 0.5f);
+            chrt.pivot = new Vector2(0.5f, 0f);                  // 下端が回転軸
+            chrt.sizeDelta = new Vector2(6f, 84f);
+            chrt.anchoredPosition = Vector2.zero;
             clockGo.SetActive(false);
 
             // --- 暗転 + 終幕(PLAYED BY / 名前) --------------------
@@ -809,13 +829,14 @@ namespace L8000.EditorTools
             flow.streamer = streamer;
             flow.voidRiser = voidRiser;
             flow.finale = finaleC;
-            flow.dim = clockDimSr;
+            flow.dim = clockDim;
             flow.clockRoot = clockGo.transform;
             flow.clockPivot = clockPivotGo.transform;
 
             // 描画順: HUD / ノイズ / フラッシュ / トースト / 暗転
             vigGo.transform.SetSiblingIndex(1);       // クレジットより上、他の演出より下
             noiseGo.transform.SetSiblingIndex(2);
+            clockGo.transform.SetSiblingIndex(3);     // 時計はノイズ/暗みより上、フラッシュ/トースト/暗転より下
             flashGo.transform.SetAsLastSibling();
             bannerGo.transform.SetAsLastSibling();
             toastGo.transform.SetAsLastSibling();
