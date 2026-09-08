@@ -357,44 +357,68 @@ namespace L8000.EditorTools
 
         static TMP_FontAsset EnsureFontAsset()
         {
-            var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
-            if (existing != null) { Log("font asset exists"); return existing; }
+            var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
 
-            var srcFont = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
-            if (srcFont == null) throw new Exception("マルモニカ TTF が見つからない: " + FontTtfPath);
-
-            // ピクセルフォントなので SDF ではなく RASTER。滲ませない。
-            var fontAsset = TMP_FontAsset.CreateFontAsset(
-                srcFont,
-                samplingPointSize: 16,
-                atlasPadding: 1,
-                renderMode: GlyphRenderMode.RASTER_HINTED,
-                atlasWidth: 1024,
-                atlasHeight: 1024,
-                atlasPopulationMode: AtlasPopulationMode.Dynamic,
-                enableMultiAtlasSupport: true);
-
-            if (fontAsset == null) throw new Exception("CreateFontAsset が null を返した");
-            fontAsset.name = "MaruMonica";
-
-            AssetDatabase.CreateAsset(fontAsset, FontAssetPath);
-            if (fontAsset.material != null)
+            if (fontAsset == null)
             {
-                fontAsset.material.name = "MaruMonica Material";
-                AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
+                var srcFont = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
+                if (srcFont == null) throw new Exception("マルモニカ TTF が見つからない: " + FontTtfPath);
+
+                // ピクセルフォントなので SDF ではなく RASTER。滲ませない。
+                fontAsset = TMP_FontAsset.CreateFontAsset(
+                    srcFont,
+                    samplingPointSize: 16,
+                    atlasPadding: 1,
+                    renderMode: GlyphRenderMode.RASTER_HINTED,
+                    atlasWidth: 1024,
+                    atlasHeight: 1024,
+                    atlasPopulationMode: AtlasPopulationMode.Dynamic,
+                    enableMultiAtlasSupport: true);
+                if (fontAsset == null) throw new Exception("CreateFontAsset が null を返した");
+                fontAsset.name = "MaruMonica";
+
+                AssetDatabase.CreateAsset(fontAsset, FontAssetPath);
+                if (fontAsset.material != null)
+                {
+                    fontAsset.material.name = "MaruMonica Material";
+                    AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
+                }
+                if (fontAsset.atlasTexture != null)
+                {
+                    fontAsset.atlasTexture.name = "MaruMonica Atlas";
+                    AssetDatabase.AddObjectToAsset(fontAsset.atlasTexture, fontAsset);
+                }
+                Log("created " + FontAssetPath);
             }
-            if (fontAsset.atlasTexture != null)
-            {
-                fontAsset.atlasTexture.name = "MaruMonica Atlas";
-                AssetDatabase.AddObjectToAsset(fontAsset.atlasTexture, fontAsset);
-            }
+
+            // 必要な文字をすべて編集時にベイクする(実行時の動的ベイクが不安定で
+            //  黒画面になる問題を回避)。アトラスをクリアしてから入れ直す。
+            fontAsset.ClearFontAssetData(setAtlasSizeToZero: false);
+            var chars = new System.Collections.Generic.HashSet<char>();
+            var credits = AssetDatabase.LoadAssetAtPath<TextAsset>(CreditsPath);
+            if (credits != null)
+                foreach (char c in credits.text) if (!char.IsControl(c)) chars.Add(c);
+            const string extra =
+                "残り8000回 PLAYED BY 名も無き声 巻き戻しが止まる もどっている ↓ ▼ ▶ ― " +
+                "なまえ はじめる とじる 設定 効果音 音量 BGM Enter エンドロールのいちばん下から。 " +
+                "英字かなカナ漢字記号数字 消失 画面の水平 だれも消さずに下まで戻った いくつかの名前はもう戻らない " +
+                "多くの名前が無くなった ほとんど何も残らなかったそれでも戻ってきた 指が止まったここまでだった " +
+                "動けなくなって名前ごと沈んだ ██ 　0123456789()/.,:;'\"!?&+-";
+            foreach (char c in extra) if (!char.IsControl(c)) chars.Add(c);
+            fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;   // 追加のため一時的に
+            var arr = new char[chars.Count]; chars.CopyTo(arr);
+            fontAsset.TryAddCharacters(new string(arr), out string missing);
+            if (!string.IsNullOrEmpty(missing))
+                Log($"font: could not add: {missing}");
+            // ベイク済みにして実行時の動的ベイク(不安定・黒画面)を止める
+            fontAsset.atlasPopulationMode = AtlasPopulationMode.Static;
+
             SetAtlasPointFilter(fontAsset);
-
             EditorUtility.SetDirty(fontAsset);
+            if (fontAsset.atlasTexture != null) EditorUtility.SetDirty(fontAsset.atlasTexture);
             AssetDatabase.SaveAssets();
-            AssetDatabase.ImportAsset(FontAssetPath);
-            Log("created " + FontAssetPath);
-            return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
+            Log($"font: baked {fontAsset.characterTable.Count} glyphs");
+            return fontAsset;
         }
 
         static void SetAtlasPointFilter(TMP_FontAsset fontAsset)
