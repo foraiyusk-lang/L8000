@@ -88,8 +88,9 @@ namespace L8000
         public float centerChuteHalfWidth = 0f;
 
         [Header("必須ゲート")]
-        [Tooltip("下端から数えて最初の何本を『ソリッド(撃って穴を開けないと通れない)』にするか。射撃チュートリアル。")]
-        public int gateLineCount = 3;
+        [Tooltip("下端から数えて最初の何本を『ソリッド(撃って穴を開けないと通れない)』にするか。0=なし。" +
+                 "射撃は任意のショートカットに一本化したため既定は 0。")]
+        public int gateLineCount = 0;
 
         // --- 便利プロパティ -------------------------------------------------
         public float CellWidth(bool wide) => wide ? fullCellWidth : halfCellWidth;

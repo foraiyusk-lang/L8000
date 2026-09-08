@@ -752,19 +752,6 @@ namespace L8000.EditorTools
             toastGo.transform.SetAsLastSibling();
             endRollGo.transform.SetAsLastSibling();
 
-            // --- 射撃チュートリアルのヒント(スタート地点) --------
-            var hintGo = new GameObject("StartHint", typeof(TextMeshPro));
-            var hint = hintGo.GetComponent<TextMeshPro>();
-            hint.font = font;
-            hint.fontSize = 5f;
-            hint.color = new Color(1f, 0.72f, 0.28f, 0.9f);
-            hint.alignment = TMPro.TextAlignmentOptions.Center;
-            hint.text = "Enter : 撃つ  ―  琥珀色の行は撃って穴を開ける";
-            hint.sortingOrder = 12;
-            hintGo.transform.position = new Vector3(0f, 1.1f, 0f);
-            var sh = hintGo.AddComponent<StartHint>();
-            sh.player = playerGo.transform;
-
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Log("saved scene " + ScenePath);

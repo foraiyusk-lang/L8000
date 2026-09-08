@@ -16,7 +16,7 @@ namespace L8000
         public float bulletSpeed = 9f;
         public float fireCooldown = 0.22f;
         [Tooltip("1発の残り回数消費。")]
-        public int fireCost = 2;
+        public int fireCost = 1;
         public float bulletMaxRange = 40f;
         public float bulletColliderRadius = 0.22f;
         public float bulletVisualHeight = 0.5f;

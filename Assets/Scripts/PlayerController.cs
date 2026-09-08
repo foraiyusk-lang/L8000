@@ -56,12 +56,6 @@ namespace L8000
         /// <summary>検証用: 1フレームだけジャンプ入力を発生させる(空中でも)。</summary>
         public static bool DebugForceJump;
 
-        [Header("残り回数(入力コスト)")]
-        [Tooltip("横移動した距離がこの world units ぶんたまるごとに残り回数を1消費する。小さいほど早く減る。")]
-        public float moveCostDistance = 0.15f;
-        [Tooltip("1ジャンプの消費。")]
-        public int jumpCost = 2;
-
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
         public bool IsGrounded => _grounded;
 
@@ -77,14 +71,11 @@ namespace L8000
         float _buffer;
         float _autoClimbCd;
         int _jumpsLeft;
-        float _moveCostAccum;
-        float _lastCostX;
         bool _wasGrounded;
 
         void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
-            _lastCostX = transform.position.x;
             _rb.freezeRotation = true;
             _rb.gravityScale = gravityScale;
             _rb.sleepMode = RigidbodySleepMode2D.NeverSleep;   // 停止中スリープ → 入力で起きない、を防ぐ
@@ -104,18 +95,10 @@ namespace L8000
         {
             if (Frozen) return;
 
-            if (Input.GetKeyDown(jumpKey)) { _buffer = jumpBuffer; Spend(jumpCost); }
+            // 入力は「押すたびに1回」消費。長押し(GetKey)では減らさない。
+            if (Input.GetKeyDown(jumpKey)) { _buffer = jumpBuffer; Spend(1); }
+            if (Input.GetKeyDown(leftKey) || Input.GetKeyDown(rightKey)) Spend(1);
             if (DebugForceJump) { _buffer = jumpBuffer; DebugForceJump = false; }
-
-            // 横に動いた距離ぶん消費(「登る＝動く」がコスト)
-            float dx = Mathf.Abs(transform.position.x - _lastCostX);
-            if (DebugAutoWalk == 0 && dx < 3f)   // 3以上はテレポート扱いで無視
-            {
-                _moveCostAccum += dx;
-                float step = Mathf.Max(0.05f, moveCostDistance);
-                while (_moveCostAccum >= step) { _moveCostAccum -= step; Spend(); }
-            }
-            _lastCostX = transform.position.x;
 
             _autoClimbCd = Mathf.Max(0f, _autoClimbCd - Time.deltaTime);
             if (DebugAutoClimb && _grounded && _autoClimbCd <= 0f)
