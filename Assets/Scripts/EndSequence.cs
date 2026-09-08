@@ -2,6 +2,7 @@ using System.Collections;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace L8000
@@ -16,6 +17,9 @@ namespace L8000
         public TextMeshProUGUI rollText;
         public RollStreamer streamer;
         public Hud hud;
+
+        [Tooltip("ロール後、静止してから最初へ戻るまでの秒数(展示ループ用)。0で戻らない。")]
+        public float restartAfter = 6f;
 
         public float fadeDuration = 1.6f;
         public float holdBeforeRoll = 0.8f;
@@ -72,7 +76,8 @@ namespace L8000
             rt.sizeDelta = new Vector2(rt.sizeDelta.x, textH);
 
             float startY = -(screenH * 0.5f) - textH;   // 本文が画面下に隠れた位置
-            float endY = (screenH * 0.5f);              // 本文が画面上に抜けた位置
+            // 最後の1行(本文下端)が画面中央あたりに来たら止める
+            float endY = restartAfter > 0f ? screenH * 0.12f : screenH * 0.5f;
             float y = startY;
             rt.anchoredPosition = new Vector2(0f, y);
 
@@ -81,6 +86,21 @@ namespace L8000
                 y += rollScrollSpeed * Time.deltaTime;
                 rt.anchoredPosition = new Vector2(0f, y);
                 yield return null;
+            }
+
+            // 展示ループ: 最後の1行だけ残してしばらく見せ、最初へ戻る
+            if (restartAfter > 0f)
+            {
+                yield return new WaitForSeconds(restartAfter);
+                ScreenFx.Flash(new Color(1f, 1f, 1f, 1f), 1.2f);
+                yield return new WaitForSeconds(0.5f);
+                // 静的状態を掃除してからリロード
+                CreditLineBuilder.TotalCharsDestroyed = 0;
+                CreditLineBuilder.Garble = false;
+                PlayerController.PhysicsAnomaly = false;
+                ReachedTop = false;
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
             }
         }
 
