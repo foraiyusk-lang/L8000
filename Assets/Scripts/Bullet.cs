@@ -59,6 +59,7 @@ namespace L8000
             _maxRange = maxRange;
             _rb.linearVelocity = velocity;
             _live = true;
+            _lastLine = null;
         }
 
         void Update()
@@ -66,12 +67,16 @@ namespace L8000
             if (_live && transform.position.y - _startY > _maxRange) Despawn();
         }
 
+        CreditLineBuilder _lastLine;
+
         void OnTriggerEnter2D(Collider2D other)
         {
             if (!_live) return;
             var line = other.GetComponentInParent<CreditLineBuilder>();
-            if (line == null) return;
-            if (line.HitAt(transform.position)) Despawn();  // 命中した文字が有ればそこで止まる。無ければ貫通
+            if (line == null || line == _lastLine) return;
+            _lastLine = line;
+            line.HitAt(transform.position);
+            Despawn();   // 1発 = 1行だけ。貫通しない(狙って撃つ)
         }
 
         void Despawn()

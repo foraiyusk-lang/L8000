@@ -41,6 +41,7 @@ namespace L8000
         int _usedBars;
         Rigidbody2D _body;
         PlatformEffector2D _effector;
+        BoxCollider2D _gateBlock;   // ゲートが閉じている間だけ有効な完全ソリッドの壁
         bool _oneWay;
         bool _isGate;
         bool _gateOpened;
@@ -90,11 +91,23 @@ namespace L8000
             transform.position = new Vector3(0f, spec.WorldY, 0f);
             gameObject.name = $"Line[{spec.Kind}] y{spec.WorldY:0.0}";
 
-            // Rule(=====)と必須ゲートは完全ソリッド。それ以外は下からすり抜けられる一方通行。
+            // Rule(=====)は完全ソリッド。それ以外は一方通行。
+            // 必須ゲートは「一方通行の足場 ＋ 撃つまで塞ぐ壁(_gateBlock)」。撃つと壁を外す。
             _isGate = spec.Solid && spec.Kind != LineKind.Rule;
             _gateOpened = false;
-            _oneWay = spec.Kind != LineKind.Rule && !spec.Solid;
+            _oneWay = spec.Kind != LineKind.Rule;
             _effector.enabled = _oneWay;
+            if (_gateBlock == null)
+            {
+                _gateBlock = gameObject.AddComponent<BoxCollider2D>();
+                _gateBlock.usedByEffector = false;
+            }
+            _gateBlock.enabled = _isGate;
+            if (_isGate)
+            {
+                _gateBlock.offset = new Vector2(0f, _layout.colliderYOffset);
+                _gateBlock.size = new Vector2(400f, Mathf.Max(0.1f, ColliderH()));
+            }
 
             float scale = spec.Kind == LineKind.Title ? _layout.titleScale
                         : spec.Kind == LineKind.Header ? _layout.headerScale
@@ -139,6 +152,7 @@ namespace L8000
                 if (s.tmp != null) { s.tmp.text = string.Empty; s.tmp.gameObject.SetActive(false); }
             }
             for (int b = 0; b < _bars.Count; b++) _bars[b].enabled = false;
+            if (_gateBlock != null) _gateBlock.enabled = false;
             _usedSegs = 0;
             _usedBars = 0;
             gameObject.SetActive(false);
@@ -199,6 +213,7 @@ namespace L8000
             if (_isGate && !_gateOpened)
             {
                 _gateOpened = true;
+                if (_gateBlock != null) _gateBlock.enabled = false;   // 壁を外す → 以降ふつうの一方通行
                 AudioManager.Play(Sfx.Gate);
                 OnGateOpened?.Invoke();
             }
@@ -421,17 +436,19 @@ namespace L8000
                 return;
             }
 
-            // 穴(破壊された可視文字の X 範囲、少し広げる)
+            // 穴(破壊された可視文字の X 範囲、少し広げる)。
+            // ゲートは撃つと一方通行の「完全な」足場になる(穴はあくまで見た目) → 穴を掘らない。
             var holes = new List<Vector2>();
             const float pad = 0.06f;
-            for (int si = 0; si < _usedSegs; si++)
-            {
-                var s = _segs[si];
-                if (s.baseX0 == null) continue;
-                for (int i = 0; i < s.baseX0.Length; i++)
-                    if (s.destroyed[i] && s.chVis[i])
-                        holes.Add(new Vector2(s.baseX0[i] - pad, s.baseX1[i] + pad));
-            }
+            if (!_isGate)
+                for (int si = 0; si < _usedSegs; si++)
+                {
+                    var s = _segs[si];
+                    if (s.baseX0 == null) continue;
+                    for (int i = 0; i < s.baseX0.Length; i++)
+                        if (s.destroyed[i] && s.chVis[i])
+                            holes.Add(new Vector2(s.baseX0[i] - pad, s.baseX1[i] + pad));
+                }
             holes.Sort((a, b) => a.x.CompareTo(b.x));
 
             float colliderH = ColliderH();
