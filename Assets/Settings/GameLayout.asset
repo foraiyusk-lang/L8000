@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7bfe4a4edd46bf46ad7274de5f61ea3, type: 3}
+  m_Name: GameLayout
+  m_EditorClassIdentifier: Assembly-CSharp::L8000.GameLayout
+  cellHeight: 0.68
+  halfCellWidth: 0.62
+  fullCellWidth: 1.24
+  lineStepY: 1.6
+  blankLineGap: 0.4
+  headerPad: 0.35
+  gapUnit: 0.5
+  maxLineGap: 1.85
+  minLineGap: 1.5
+  centerGap: 0.45
+  nameColor: {r: 1, g: 1, b: 1, a: 1}
+  roleColor: {r: 0.72, g: 0.78, b: 0.9, a: 1}
+  headerColor: {r: 0.55, g: 0.75, b: 1, a: 1}
+  dimColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  titleColor: {r: 1, g: 1, b: 1, a: 1}
+  headerScale: 1.35
+  titleScale: 1.7
+  streamMarginY: 16
+  maxSpawnPerFrame: 4
+  colliderHeightRatio: 0.9
+  colliderYOffset: 0
+  charColliderWidthRatio: 0.85
+  centerChuteHalfWidth: 0.42
