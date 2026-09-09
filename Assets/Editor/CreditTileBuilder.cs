@@ -76,7 +76,7 @@ namespace L8000.EditorTools
         class Line
         {
             public List<Tile> tiles = new List<Tile>();
-            public bool isHeader, isTitle, isRule;
+            public bool isHeader, isTitle, isRule, center;
             public Sabo sabo;
             public Tile saboTile;   // 撃つと歪みが出るタイル(役割の単語を優先)
             public float Width => tiles.Sum(t => t.w) + WordGap * Mathf.Max(0, tiles.Count - 1);
@@ -101,9 +101,13 @@ namespace L8000.EditorTools
                 cur.Add(spec);
                 if (spec.Kind == LineKind.Header)
                 {
-                    var hdr = cur[cur.Count - 1];
-                    cur.RemoveAt(cur.Count - 1);
-                    cur.Insert(0, hdr);           // 見出しを入口へ
+                    // section 0(on-ramp)以外は見出しをセクションの入口(先頭)へ回す
+                    if (sections.Count > 0)
+                    {
+                        var hdr = cur[cur.Count - 1];
+                        cur.RemoveAt(cur.Count - 1);
+                        cur.Insert(0, hdr);
+                    }
                     sections.Add(cur);
                     cur = new List<LineSpec>();
                 }
@@ -121,7 +125,7 @@ namespace L8000.EditorTools
                 {
                     string src = spec.Right != null ? $"{spec.Left} :: {spec.Right}" : (spec.Left ?? "");
                     var sabo = Detect(src);
-                    var line = new Line { sabo = sabo, isHeader = spec.Kind == LineKind.Header, isTitle = spec.Kind == LineKind.Title, isRule = spec.Kind == LineKind.Rule };
+                    var line = new Line { sabo = sabo, isHeader = spec.Kind == LineKind.Header, isTitle = spec.Kind == LineKind.Title, isRule = spec.Kind == LineKind.Rule, center = spec.CenterOverride || spec.Kind == LineKind.Title };
 
                     if (spec.Kind == LineKind.Rule)
                     {
@@ -148,7 +152,10 @@ namespace L8000.EditorTools
                         bool isHdr = spec.Kind == LineKind.Header && !u.name;
                         var c = MakeTile(parent, font, u.s, u.name, isHdr, false, scale, src, wide: false);
                         c.name = $"Tile[{(u.name ? "Name" : spec.Kind.ToString())}] {Trim(u.s)}";
-                        var tile = new Tile { c = c, w = EstWidth(u.s) * scale };
+                        // 実際のコライダ幅で間隔を決める(EstWidth は字間を含み広すぎるため、
+                        // 行内の単語間に隙間ができてプレイヤー(幅0.22)がすり抜ける)
+                        float aw = c.GetComponent<BoxCollider2D>().size.x * c.transform.lossyScale.x;
+                        var tile = new Tile { c = c, w = Mathf.Max(0.4f, aw) };
                         line.tiles.Add(tile);
                         if (sabo != Sabo.None && line.saboTile == null && !u.name) line.saboTile = tile;
                         made++;
@@ -209,12 +216,19 @@ namespace L8000.EditorTools
 
         static float LayOnRamp(List<Line> lines, float cy)
         {
+            // 下から: ===== の床 → 中央寄りの簡単な段差で登り出しを教える
             float y = cy;
-            for (int i = 0; i < lines.Count; i++)
+            int step = 0;
+            foreach (var l in lines)
             {
-                float x = lines[i].isRule ? 0f : ((i % 3) - 1) * 2.6f;
-                PlaceLine(lines[i], x, y);
-                y += lines[i].isRule ? 1.5f : 1.7f;
+                if (l.isRule) { PlaceLine(l, 0f, y); y += 2.0f; continue; }
+                if (l.center) { PlaceLine(l, 0f, y); y += 1.7f; continue; }   // THANKYOUFORPLAYING は真ん中
+                // ゆるいジグザグ。最初の2段はほぼ中央で簡単に。
+                float amp = step < 2 ? 0.8f : 1.9f;
+                float x = ((step % 2) == 0 ? -1f : 1f) * amp;
+                PlaceLine(l, x, y);
+                y += 1.7f;
+                step++;
             }
             return y;
         }
@@ -226,7 +240,7 @@ namespace L8000.EditorTools
             int d = dir;
             foreach (var l in lines)
             {
-                if (l.isHeader) { PlaceLine(l, 0f, y); y += StepUp + 0.3f; continue; }
+                if (l.isHeader || l.center) { PlaceLine(l, 0f, y); y += StepUp + 0.3f; continue; }
                 PlaceLine(l, x, y);
                 x += d * StepAcross;
                 y += StepUp;
@@ -242,7 +256,7 @@ namespace L8000.EditorTools
             float y = cy, prevX = 0f;
             foreach (var l in lines)
             {
-                if (l.isHeader) { PlaceLine(l, 0f, y); y += StepUp + 0.3f; continue; }
+                if (l.isHeader || l.center) { PlaceLine(l, 0f, y); y += StepUp + 0.3f; continue; }
                 float dx = (float)(rng.NextDouble() * 6.0 - 3.0);
                 float x = Mathf.Clamp(prevX + dx, -HalfW + 1.5f, HalfW - 1.5f);
                 PlaceLine(l, x, y);
@@ -260,7 +274,7 @@ namespace L8000.EditorTools
             var used = new HashSet<Line>();
             void Borrow(Line l) { if (l != null && !used.Contains(l)) { used.Add(l); ceilTiles.AddRange(l.tiles.Where(t => t != gate.saboTile)); } }
             Borrow(gate);
-            for (int k = 1; k <= 8 && ceilTiles.Sum(t => t.w) < HalfW * 3f; k++)
+            for (int k = 1; k <= 12 && ceilTiles.Sum(t => t.w) < HalfW * 3.8f; k++)
             {
                 if (gi + k < lines.Count) Borrow(lines[gi + k]);
                 if (gi - k >= 1) Borrow(lines[gi - k]);   // 見出し(index 0)は使わない
@@ -292,30 +306,69 @@ namespace L8000.EditorTools
                     s1.c.transform.position = new Vector3(s0.w * 0.5f + s1.w * 0.5f, standY, 0f);
                 }
             }
-            // 3) 天井: saboTile を x=0、borrowed タイルで左右対称に全幅(±(HalfW+1))を埋める
-            float ceilY = standY + 2.35f;
-            gate.saboTile.c.transform.position = new Vector3(0f, ceilY, 0f);
-            float lx = -gate.saboTile.w * 0.5f - WordGap;
-            float rx = gate.saboTile.w * 0.5f + WordGap;
-            int ti = 0;
-            while (ti < ceilTiles.Count && (lx > -(HalfW + 1f) || rx < HalfW + 1f))
-            {
-                var t = ceilTiles[ti++];
-                if (lx > -(HalfW + 1f) && (lx * -1f <= rx || rx >= HalfW + 1f))
-                { t.c.transform.position = new Vector3(lx - t.w * 0.5f, ceilY, 0f); lx -= t.w + WordGap; }
-                else
-                { t.c.transform.position = new Vector3(rx + t.w * 0.5f, ceilY, 0f); rx += t.w + WordGap; }
-            }
-            // 余ったタイルは天井の上の階段へ回す(以降で使う)
-            var leftover = ceilTiles.Skip(ti).ToList();
+            // 3) 天井: 画面幅(±CeilEdge)をタイルで隙間なく埋める。
+            //    必要な枚数だけ選び、[-CeilEdge, CeilEdge] に均等配置(僅かな重なりは全継ぎ目へ分散)。
+            //    saboTile は中央付近に置く。余りは上の足場へ回す。
+            const float CeilEdge = HalfW + 0.9f;
+            float ceilY = standY + 2.1f;   // 台からジャンプ→頭が天井を越える高さ
+            float need = CeilEdge * 2f;
 
-            // 4) 天井の上: 着地足場(余りタイル)+ 残りの行を階段で
-            y = ceilY + 1.6f;
+            var pick = new List<Tile> { gate.saboTile };
+            float have = gate.saboTile.w;
+            foreach (var t in ceilTiles.OrderByDescending(t => t.w))
+            {
+                if (have >= need + 0.5f) break;
+                pick.Add(t); have += t.w;
+            }
+            var leftover = ceilTiles.Where(t => !pick.Contains(t)).ToList();
+
+            // saboTile を必ず中央に(プレイヤーは中央の台から真上へ撃つ)
+            var others = pick.Where(t => t != gate.saboTile).ToList();
+            int half = others.Count / 2;
+            var ordered = new List<Tile>();
+            ordered.AddRange(others.Take(half));
+            ordered.Add(gate.saboTile);
+            ordered.AddRange(others.Skip(half));
+
+            if (ordered.Count == 1)
+            {
+                gate.saboTile.c.transform.position = new Vector3(0f, ceilY, 0f);
+            }
+            else
+            {
+                float totalW = ordered.Sum(t => t.w);
+                float step = (need - totalW) / (ordered.Count - 1);   // 負なら重なり
+                float cur = -CeilEdge;
+                foreach (var t in ordered)
+                {
+                    t.c.transform.position = new Vector3(cur + t.w * 0.5f, ceilY, 0f);
+                    cur += t.w + step;
+                }
+                // saboTile がちょうど x=0 に来るよう天井全体を平行移動(端の余白 0.9 で吸収)
+                float shift = -gate.saboTile.c.transform.position.x;
+                shift = Mathf.Clamp(shift, -0.8f, 0.8f);
+                foreach (var t in ordered)
+                    t.c.transform.position += new Vector3(shift, 0f, 0f);
+            }
+
+            // 4) 天井の上: 撃ち抜いた穴(x=0)の真上は必ず空ける。着地足場は左右へ寄せて置く。
+            y = ceilY + 2.5f;   // 穴からダブルジャンプで届く高さ
             if (leftover.Count > 0)
             {
-                float lw = leftover.Sum(t => t.w) + WordGap * Mathf.Max(0, leftover.Count - 1);
-                float ix = Mathf.Max(-2.5f, -lw * 0.5f);
-                foreach (var t in leftover) { t.c.transform.position = new Vector3(ix + t.w * 0.5f, y, 0f); ix += t.w + WordGap; }
+                const float rowMax = HalfW - 0.6f;   // 片側ぶんの幅
+                int idx = 0, sideL = 1;
+                while (idx < leftover.Count)
+                {
+                    var row = new List<Tile>();
+                    float rw = 0f;
+                    while (idx < leftover.Count && (row.Count == 0 || rw + leftover[idx].w + WordGap <= rowMax))
+                    { rw += leftover[idx].w + (row.Count > 0 ? WordGap : 0f); row.Add(leftover[idx]); idx++; }
+                    // 穴の真上(x=0 周辺)を避けて左右どちらかに寄せる
+                    float ix = sideL > 0 ? 0.8f : -0.8f - rw;
+                    foreach (var t in row) { t.c.transform.position = new Vector3(ix + t.w * 0.5f, y, 0f); ix += t.w + WordGap; }
+                    sideL = -sideL;
+                    if (sideL > 0) y += StepUp;
+                }
                 y += StepUp;
             }
             side = -1;
@@ -348,7 +401,7 @@ namespace L8000.EditorTools
             tile.isRule = isRule;
             tile.sizeScale = scale;
             tile.sourceLine = sourceLine;
-            tile.thinTop = !wide;
+            tile.thinTop = false;   // 文字の描画部分すべてに当たり判定(FB3: 登り=降り 同一 / 下からすり抜け不可)
             tile.Rebuild(force: true);
             return tile;
         }

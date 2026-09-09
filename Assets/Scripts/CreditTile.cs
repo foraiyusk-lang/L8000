@@ -25,8 +25,8 @@ namespace L8000
         [Tooltip("フォント倍率(見出しは 1.35、タイトルは 1.7 など)。")]
         public float sizeScale = 1f;
 
-        [Tooltip("当たり判定を文字の上端側に薄く(足場向き)。false で文字ボックス全体。")]
-        public bool thinTop = true;
+        [Tooltip("当たり判定を文字の上端側に薄く(足場向き)。false で文字ボックス全体(既定)。")]
+        public bool thinTop = false;
 
         [Range(0.1f, 1f)] public float thickness = 0.7f;
 
