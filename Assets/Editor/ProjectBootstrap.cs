@@ -909,23 +909,23 @@ namespace L8000.EditorTools
             mgr.AddComponent<AudioManager>();
             var ts = mgr.AddComponent<TitleScreen>();
 
-            // ロゴ(ドット絵)。16:9・ortho5(画面幅 ~17.8u)で ~9.6u = 画面の約 54%。
+            // ロゴ(ドット絵・2段組)。縦長なので幅は控えめ・少し上寄せ。
             var logoGo = new GameObject("Logo");
-            logoGo.transform.position = new Vector3(0f, 2.15f, 0f);
+            logoGo.transform.position = new Vector3(0f, 2.6f, 0f);
             var logoSr = logoGo.AddComponent<SpriteRenderer>();
             logoSr.sprite = logo;
             logoSr.sortingOrder = 5;
-            float logoScale = 9.6f / Mathf.Max(1, logo.rect.width) * 16f;   // 目標幅 ~9.6u
+            float logoScale = 7.4f / Mathf.Max(1, logo.rect.width) * 16f;   // 目標幅 ~7.4u
             logoGo.transform.localScale = Vector3.one * logoScale;
             ts.logo = logoSr;
 
             // フレーバー(ロゴの下、間を空ける)
             var flavGo = new GameObject("Flavor", typeof(TextMeshPro));
             var flav = flavGo.GetComponent<TextMeshPro>();
-            flav.font = font; flav.fontSize = 3.4f; flav.alignment = TMPro.TextAlignmentOptions.Center;
+            flav.font = font; flav.fontSize = 3.2f; flav.alignment = TMPro.TextAlignmentOptions.Center;
             flav.color = new Color(0.55f, 0.6f, 0.72f);
             flav.text = "エンドロールの いちばん下から。";
-            flavGo.transform.position = new Vector3(0f, 0.15f, 0f);
+            flavGo.transform.position = new Vector3(0f, -0.55f, 0f);
             ts.flavor = flav;
 
             // --- Canvas (なまえ入力 / PLAY / 設定) ---

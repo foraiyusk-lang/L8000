@@ -1,26 +1,26 @@
 """
-残り8000回 - タイトルロゴ(ドット絵)
+残り8000回 - タイトルロゴ(ドット絵 / コンセプト = 数字が減っていく)
 
-方針:
-  タイトルは「登り切った先の、まだ壊れていない場所」。だからロゴ自体は
-  クリーンでどっしり。摩耗表現はクレジット(タイル)側の役目なのでここでは最小限。
+構成:
+  1段目 : 残り
+  2段目 : [8000(下2/3を上に押し上げ)] [2px] [7999(上1/3)]  回(ボタン)
 
-  ゲーム本編と同じフォント x12y16pxMaruMonica を 32px(16 の倍数 = AA なしで
-  ピクセル完全)でラスタライズし、「1 ラスタピクセル = 1 ドット」として扱う。
-  そのドット格子の上で:
-    - 棚影(shelf) : 文字下端の真下 1 ドットを濃紺に。重さを出す。
-    - 底の罫線     : 文字の下に 2 ドットの横線(= 登り出す ====== )。全幅。
-    - 欠け         : 底辺の輪郭を数ドットだけ、ごく僅かに(世界観の目配せ程度)。
-  最後に整数倍(SCALE)で拡大。各ドットがカリッとした正方形になる。
+  「8000」は下から 2/3 だけ描いて 1/3 ぶん上へ押し上げる。空いた下 1/3 に
+  「7999」の上 1/3 を 2px あけて置く。= オドメーターが回っている途中の見た目
+  = 「残り回数が 1 減った瞬間」。
+
+  「回」は文字ではなく "上から見た押しボタン": 灰色の四角 + 中央に赤い丸。
+  このゲームは「ボタンをあと N 回押せる」話なので 回 をボタンにする。
+
+  ゲーム本編と同じ x12y16pxMaruMonica を 32px(16 の倍数 = AA なし)でラスタライズ。
+  「1 ラスタピクセル = 1 ドット」で組んで整数倍。
 
   出力 : Assets/Art/logo.png (透過 / Point / 圧縮なし)
-  配色 : 寒色モノクロのみ。世界観を壊す彩色はしない。
-  差し替え: 同じパス・近い比率の PNG を置けば TitleScreen がそのまま使う。
+  配色 : 文字は寒色の白。色みはボタンの赤/灰だけ(世界観を壊さない範囲の一点)。
 
 deps: Pillow
 """
 import os
-import random
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -28,19 +28,23 @@ _ROOT = os.path.join(os.path.dirname(__file__), "..")
 FONT = os.path.join(_ROOT, "Assets", "Fonts", "x12y16pxMaruMonica.ttf")
 OUT = os.path.join(_ROOT, "Assets", "Art", "logo.png")
 
-TEXT = "残り8000回"
-NATIVE = 32          # ラスタライズ画素(16 の倍数 = ピクセル完全)
-SCALE = 3            # 拡大率(1 ドット = SCALE x SCALE px)
-MARGIN_X = 6         # 左右余白(ドット)
-MARGIN_TOP = 3
-RULE_H = 2           # 底の罫線の太さ(ドット)
-RULE_DROP = 3        # 文字下端から罫線までの間(ドット)
+NATIVE = 32          # ラスタライズ画素
+SCALE = 3            # 拡大率
+MARGIN = 4           # 余白(ドット)
+CUT = 0.30           # 上を隠す割合(≈ 1/3)。8000 は下 (1-CUT)、7999 は上 CUT。
+ROLL_GAP = 2         # 8000 と 7999 の間(ドット)= 「2pix」
+LINE_GAP = 3         # 1段目と2段目の間
+BTN_GAP = 4          # 数字とボタンの間
+RULE_DROP = 3
+RULE_H = 2
 
-INK = (230, 236, 247, 255)      # ほぼ白・ごく僅かに青
-SHADOW = (12, 14, 22, 240)      # 真下 1 ドットの棚影
-RULE = (116, 128, 152, 200)     # 底の罫線
-
-rng = random.Random(80009)
+INK   = (231, 237, 248, 255)   # ほぼ白・僅かに青(残り・8000)
+INK2  = (206, 216, 232, 255)   # 7999(ほんの少しだけ淡く)
+SHADOW = (12, 14, 22, 235)
+RULE  = (116, 128, 152, 190)
+BTN_RING = (122, 128, 140, 255)   # ボタンの灰
+BTN_RED  = (198, 66, 58, 255)     # 押しボタンの赤(少しくすませる)
+BTN_RED_HI = (226, 122, 112, 255)
 
 
 def glyph_mask(text, size):
@@ -55,48 +59,86 @@ def glyph_mask(text, size):
 
 
 def main():
-    mask, mw, mh = glyph_mask(TEXT, NATIVE)
+    zan, zw, zh = glyph_mask("残り", NATIVE)
+    n8, n8w, n8h = glyph_mask("8000", NATIVE)
+    n7, n7w, n7h = glyph_mask("7999", NATIVE)
 
-    ox, oy = MARGIN_X, MARGIN_TOP
-    W = mw + MARGIN_X * 2
-    rule_y0 = oy + mh + RULE_DROP
-    H = rule_y0 + RULE_H + MARGIN_TOP
+    third = round(n8h * CUT)                 # 上を隠す高さ
+    keep8 = n8h - third                      # 8000 の下ぶん
+    roll_h = keep8 + ROLL_GAP + third        # 2段目の数字ブロックの高さ
+    btn = keep8 + 2                          # ボタンの一辺(現在の数字の高さに合わせる)
+    indent = round(NATIVE * 0.62)            # 「　」ぶんの字下げ
+
+    line2_w = n8w + BTN_GAP + btn
+    content_w = max(zw, indent + line2_w)
+    W = MARGIN * 2 + content_w
+    rule_y = MARGIN + zh + LINE_GAP + max(roll_h, btn) + RULE_DROP
+    H = rule_y + RULE_H + MARGIN
+
     grid = [[(0, 0, 0, 0)] * W for _ in range(H)]
 
     def put(x, y, c):
-        if 0 <= x < W and 0 <= y < H:
+        if 0 <= x < W and 0 <= y < H and c[3] != 0:
             grid[y][x] = c
 
-    def filled(mx, my):
-        return 0 <= mx < mw and 0 <= my < mh and mask[my][mx]
+    # ---- 1段目: 残り ----
+    z_x, z_y = MARGIN, MARGIN
+    for my in range(zh):
+        for mx in range(zw):
+            if zan[my][mx]:
+                if my + 1 >= zh or not zan[my + 1][mx]:
+                    put(z_x + mx, z_y + my + 1, SHADOW)
+                put(z_x + mx, z_y + my, INK)
 
-    # 1) 棚影(文字下端の真下 1 ドット)
-    for my in range(mh):
-        for mx in range(mw):
-            if mask[my][mx] and not filled(mx, my + 1):
-                put(ox + mx, oy + my + 1, SHADOW)
+    # ---- 2段目 ----
+    b_x = MARGIN + indent
+    b_y = MARGIN + zh + LINE_GAP
 
-    # 2) 本体インク
-    for my in range(mh):
-        for mx in range(mw):
-            if mask[my][mx]:
-                put(ox + mx, oy + my, INK)
+    # 8000 の下 2/3 を、1/3 ぶん上へ(= b_y から描く)
+    for my in range(third, n8h):
+        for mx in range(n8w):
+            if n8[my][mx]:
+                put(b_x + mx, b_y + (my - third), INK)
+    # 8000 の下辺に棚影
+    for mx in range(n8w):
+        if n8[n8h - 1][mx]:
+            put(b_x + mx, b_y + keep8, SHADOW)
 
-    # 3) 底辺だけ、ごく僅かな欠け(下 2 行の輪郭から 4 ドット)
-    bottom_edge = [
-        (mx, my) for my in range(mh) for mx in range(mw)
-        if mask[my][mx] and my >= mh - 2 and not filled(mx, my + 1)
-    ]
-    for (mx, my) in rng.sample(bottom_edge, k=min(4, len(bottom_edge))):
-        put(ox + mx, oy + my, (0, 0, 0, 0))
-        put(ox + mx, oy + my + 1, (0, 0, 0, 0))
+    # 空いた下 1/3 に 7999 の上 1/3(2px あけて)
+    r_y = b_y + keep8 + ROLL_GAP
+    for my in range(third):
+        for mx in range(n7w):
+            if n7[my][mx]:
+                put(b_x + mx, r_y + my, INK2)
 
-    # 4) 底の罫線(全幅・2 ドット)= 登り出す ======
-    for yy in range(rule_y0, rule_y0 + RULE_H):
+    # ---- 回 = 押しボタン(上から見た図)。現在の数字(8000 下ぶん)の中心に合わせる ----
+    bx0 = b_x + n8w + BTN_GAP
+    by0 = b_y + keep8 // 2 - btn // 2
+    cx, cy = bx0 + btn / 2.0, by0 + btn / 2.0
+    r_out = btn / 2.0 - 0.5
+    r_red = btn / 2.0 - 4.0
+    for yy in range(btn):
+        for xx in range(btn):
+            px, py = bx0 + xx, by0 + yy
+            d = ((px + 0.5 - cx) ** 2 + (py + 0.5 - cy) ** 2) ** 0.5
+            # 外枠(灰のリング)
+            if btn // 2 - 1 <= max(abs(xx - btn // 2), abs(yy - btn // 2)) <= btn // 2:
+                put(px, py, BTN_RING)
+            # 中央の赤
+            if d <= r_red:
+                put(px, py, BTN_RED)
+            elif d <= r_red + 1.2:
+                put(px, py, BTN_RED_HI)
+    # ボタンの棚影
+    for xx in range(btn):
+        put(bx0 + xx, by0 + btn, SHADOW)
+
+    # ---- 底の罫線(= 登り出す ====== )----
+    for yy in range(rule_y, rule_y + RULE_H):
         for x in range(1, W - 1):
             put(x, yy, RULE)
 
-    # ---- 整数倍で拡大(ニアレスト)----
+    # ---- 整数倍で拡大 ----
     out = Image.new("RGBA", (W * SCALE, H * SCALE), (0, 0, 0, 0))
     op = out.load()
     for y in range(H):
