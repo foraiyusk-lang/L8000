@@ -983,7 +983,7 @@ namespace L8000.EditorTools
             var placeText = placeGo.gameObject.AddComponent<TextMeshProUGUI>();
             placeText.font = font; placeText.fontSize = 24f;
             placeText.color = new Color(1f, 1f, 1f, 0.32f);
-            placeText.text = "英字 かな カナ 漢字 記号 数字";
+            placeText.text = "かな ・ カナ ・ 英数字";
             placeText.alignment = TMPro.TextAlignmentOptions.Left;
             placeText.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
 

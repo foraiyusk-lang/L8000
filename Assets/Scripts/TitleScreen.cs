@@ -49,6 +49,9 @@ namespace L8000
                 nameField.text = PlayerName.Value;
                 nameField.characterLimit = 16;
                 nameField.onSubmit.AddListener(_ => Confirm());
+                // フォントは軽量化のため かな + 英数のみ静的ベイク。
+                // 漢字等はベイクに無く「?」化けするので、入力段階で弾く。
+                nameField.onValidateInput = (text, index, ch) => AllowedNameChar(ch) ? ch : '\0';
             }
             if (bgmSlider != null)
             {
@@ -160,6 +163,21 @@ namespace L8000
             }
             PlayerName.Value = n;
             StartCoroutine(Go());
+        }
+
+        /// <summary>名前に使える文字か。ひらがな/カタカナ/半角英数と少しの記号のみ
+        /// (フォントの静的ベイクに含まれる範囲)。漢字・全角英数・絵文字などは弾く。</summary>
+        static bool AllowedNameChar(char c)
+        {
+            if (c >= 'A' && c <= 'Z') return true;
+            if (c >= 'a' && c <= 'z') return true;
+            if (c >= '0' && c <= '9') return true;
+            if (c == ' ' || c == '-' || c == '_' || c == '.') return true;
+            if (c >= 'ぁ' && c <= 'ゖ') return true;   // ひらがな
+            if (c >= 'ァ' && c <= 'ヺ') return true;   // カタカナ
+            if (c == 'ー' || c == '・') return true;   // ー ・
+            if (c == '゛' || c == '゜') return true;   // ゛゜(単独)
+            return false;
         }
 
         /// <summary>旧 API 互換(PLAY ボタンが Play を呼んでいた場合)。</summary>
