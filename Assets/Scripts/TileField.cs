@@ -35,12 +35,16 @@ namespace L8000
 
         public static TileField Instance { get; private set; }
 
+        /// <summary>破壊されたタイルを破壊順(古→新)で記録。BackSpace の巻き戻し対象。</summary>
+        readonly List<CreditTile> _destroyed = new List<CreditTile>();
+
         void Awake()
         {
             Instance = this;
             DescentDropDestroyed = false;
             TotalCharsDestroyed = 0;
             Garble = false;
+            _destroyed.Clear();
 
             _tiles.Clear();
             GetComponentsInChildren(true, _tiles);
@@ -66,6 +70,32 @@ namespace L8000
         }
 
         public static void FireBottomBroken() => OnBottomBroken?.Invoke();
-        public static void FireTileDestroyed(CreditTile t, string s) => OnTileDestroyed?.Invoke(t, s);
+
+        public static void FireTileDestroyed(CreditTile t, string s)
+        {
+            if (t != null && Instance != null && !Instance._destroyed.Contains(t))
+                Instance._destroyed.Add(t);
+            OnTileDestroyed?.Invoke(t, s);
+        }
+
+        /// <summary>
+        /// BackSpace: 直近で壊したタイルのうち「プレイヤーより上」にあるものを1つ復元する。
+        /// 不要な破壊で詰むのを防ぐ安全弁。自分より下(=既に登って通り過ぎた足場)は戻せない。
+        /// </summary>
+        public bool UndoLastAbove(float playerY)
+        {
+            for (int i = _destroyed.Count - 1; i >= 0; i--)
+            {
+                var t = _destroyed[i];
+                if (t == null) { _destroyed.RemoveAt(i); continue; }
+                if (!t.Destroyed) { _destroyed.RemoveAt(i); continue; }   // 既に復元済み
+                if (t.isRule) continue;                                    // 最下部の床は対象外
+                if (t.transform.position.y <= playerY + 0.2f) continue;    // 自分より下は戻さない
+                t.Restore();
+                _destroyed.RemoveAt(i);
+                return true;
+            }
+            return false;
+        }
     }
 }

@@ -42,6 +42,16 @@ namespace L8000
             if (_pc != null && _pc.Frozen) return;
             if (!CanFire) return;
 
+            // BackSpace: ひとつ前に消した部分(自分より上のもの)を元に戻す。不要破壊での詰み防止。
+            if (!FireDown && Input.GetKeyDown(KeyCode.Backspace))
+            {
+                var tf = TileField.Instance;
+                if (tf != null && tf.UndoLastAbove(transform.position.y))
+                {
+                    ScreenFx.Toast("― もどした ―", new Color(0.7f, 0.82f, 0.95f), 1.4f);
+                }
+            }
+
             bool wantFire = Input.GetKeyDown(fireKey);
             if (_cd <= 0f && (wantFire || DebugAutoFire))
             {

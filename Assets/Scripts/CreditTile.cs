@@ -205,6 +205,17 @@ namespace L8000
 
         public void BreakOpen() => Destroy_();
 
+        /// <summary>BackSpace で「ひとつ前に消した部分」を元に戻す。破壊数もその分戻す。</summary>
+        public void Restore()
+        {
+            if (!Destroyed) return;
+            Destroyed = false;
+            TileField.TotalCharsDestroyed = Mathf.Max(0, TileField.TotalCharsDestroyed - Mathf.Max(1, (text ?? "").Length));
+            _built = "\0";
+            Rebuild(force: true);
+            AudioManager.Play(Sfx.Shoot, 0.4f);
+        }
+
         /// <summary>可視文字の world 範囲(min/max)。レイアウト計算用。</summary>
         public Bounds VisibleBounds
         {
