@@ -372,3 +372,20 @@
   - GameFlow の降りフェーズのコメントを実態に更新(commit 78a8387、コメントのみ)。
 - 次イテレーション: Unity 復帰を確認 → 降り(密レベルを人力で降りられるか)を目視検証 →
   「降りの設計 要ユーザー判断」の A/B/C を提案。
+
+### 済(2026-09-09 10:45頃) — エディタ Play を常にタイトルから(commit 5397034)
+ユーザーFB「Unity のプレイモードでもタイトル画面が表示されるように」
+- `Assets/Editor/PlayFromTitle.cs`: `EditorSceneManager.playModeStartScene` を Title.unity に固定。
+  どのシーンを開いて Play しても タイトル画面から。Stop で元シーンに復帰。
+- メニュー「L8000/Play From Title」で ON/OFF(既定 ON・EditorPrefs 保存)。Main 直接デバッグ時は OFF。
+- 検証: Main 開いた状態で Play → Title ロード確認。PLAY→なまえ入力。トグルも動作。
+
+### 音楽の状態(ユーザー質問「実装されてる?」)— 実装済み・鳴っている
+- BGM: `bgm.wav`(順) / `bgm_rev.wav`(逆)。MIDI 生成(scripts/make_bgm.py)、~128s ループ、
+  対称エンベロープで逆再生も違和感なし。タイトル/降り=順、登り=逆、巻き戻しでクロスフェード。
+- SE 6種(jump/shoot/land/hit/break/gate、scripts/make_sfx.py)。
+- この場で `AudioListener.GetOutputData` ピーク 0.0346 を確認 = **実際に音は出ている**
+  (静かな小節だと一瞬 0 になるが clip データにはちゃんと波形あり: ピーク 0.11)。
+- AudioListener は Main Camera にあり、mute なし、spatialBlend=0(2D)。
+- → 実装は完了。**音質・音量バランス・逆再生の聞こえ方はユーザーの実聴待ち**
+  (Game ビューの音ミュートボタン / PC 音量に注意)。
