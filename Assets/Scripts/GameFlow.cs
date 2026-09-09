@@ -32,7 +32,9 @@ namespace L8000
         [Header("降り")]
         public float descentSpeed = 6.5f;
         public float descentNudge = 3.5f;
-        public float descentVoidSpeed = 3.0f;
+        // 降りは密な足場を自分で降りていく(FB: 当たり判定は登りと同じ)。以前の
+        // 「速い自動降下」前提が崩れたので、無は静かな残響程度に(重力落下で必ず引き離せる)。
+        public float descentVoidSpeed = 0.8f;
 
         enum Phase { Climb, Rewind, Descent, Bottom, Done }
         Phase _phase = Phase.Climb;

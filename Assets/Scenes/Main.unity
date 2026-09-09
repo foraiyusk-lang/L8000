@@ -37450,7 +37450,7 @@ MonoBehaviour:
   climbVoidSpeed: 1
   descentSpeed: 6.5
   descentNudge: 3.5
-  descentVoidSpeed: 3
+  descentVoidSpeed: 0.8
 --- !u!114 &658040258
 MonoBehaviour:
   m_ObjectHideFlags: 0
