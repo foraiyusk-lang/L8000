@@ -21,6 +21,9 @@ namespace L8000
         /// <summary>降り演出中: 撃たれた(破壊された)タイルは当たり判定を消す(取り消し線で素通り)。</summary>
         public static bool DescentDropDestroyed;
 
+        /// <summary>降り中: ===== 以外の全タイルを素通りに(登ってきた道が流れ去る)。</summary>
+        public static bool DescentPassThrough;
+
         /// <summary>最下部の ===== が下向き射撃で突破されたとき。</summary>
         public static System.Action OnBottomBroken;
 
@@ -42,6 +45,7 @@ namespace L8000
         {
             Instance = this;
             DescentDropDestroyed = false;
+            DescentPassThrough = false;
             TotalCharsDestroyed = 0;
             Garble = false;
             _destroyed.Clear();

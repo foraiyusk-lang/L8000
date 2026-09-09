@@ -133,7 +133,10 @@ namespace L8000
                 if (ch.topRight.y > maxY) maxY = ch.topRight.y;
             }
 
-            if (!any || gone || strike)
+            // 降り中は「巻き戻し」= 登ってきた足場が下へ流れ去る。=====(床)以外は素通り。
+            bool descentPass = Application.isPlaying && TileField.DescentPassThrough && !isRule;
+
+            if (!any || gone || strike || descentPass)
             {
                 box.enabled = false;
             }
