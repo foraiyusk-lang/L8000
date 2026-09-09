@@ -42,3 +42,7 @@ Screenshots/
 # Screenshot folder meta (folder contents already ignored above)
 Assets/Screenshots.meta
 Assets/Screenshots/
+
+# Python
+__pycache__/
+*.pyc

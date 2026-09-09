@@ -32,6 +32,10 @@ namespace L8000
         [Header("互換(未使用可)")]
         public TextMeshProUGUI playLabel;
 
+        [Header("演出")]
+        public UnityEngine.UI.Image fadeOverlay;   // 起動時に黒→透明(静かに立ち上げる)
+        public float fadeInTime = 0.8f;
+
         const string BgmKey = "l8000_bgm";
         const string SfxKey = "l8000_sfx";
 
@@ -61,6 +65,28 @@ namespace L8000
             Apply();
 
             if (AudioManager.Instance != null) AudioManager.Instance.SetReversed(false);
+
+            SetTitleVisible(true);          // タイトルの各要素を確実に表示状態に
+            _step = 0;
+            StartCoroutine(FadeIn());
+        }
+
+        IEnumerator FadeIn()
+        {
+            if (fadeOverlay == null) yield break;
+            fadeOverlay.gameObject.SetActive(true);
+            var c = fadeOverlay.color; c.a = 1f; fadeOverlay.color = c;
+            float t = 0f;
+            while (t < fadeInTime)
+            {
+                t += Time.unscaledDeltaTime;
+                c.a = Mathf.Clamp01(1f - t / fadeInTime);
+                fadeOverlay.color = c;
+                yield return null;
+            }
+            c.a = 0f; fadeOverlay.color = c;
+            fadeOverlay.raycastTarget = false;
+            fadeOverlay.gameObject.SetActive(false);
         }
 
         void Update()

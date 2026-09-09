@@ -899,23 +899,23 @@ namespace L8000.EditorTools
             mgr.AddComponent<AudioManager>();
             var ts = mgr.AddComponent<TitleScreen>();
 
-            // ロゴ(ピクセルアート)
+            // ロゴ(ドット絵)。16:9・ortho5(画面幅 ~17.8u)で ~9.6u = 画面の約 54%。
             var logoGo = new GameObject("Logo");
-            logoGo.transform.position = new Vector3(0f, 2.35f, 0f);
+            logoGo.transform.position = new Vector3(0f, 2.15f, 0f);
             var logoSr = logoGo.AddComponent<SpriteRenderer>();
             logoSr.sprite = logo;
             logoSr.sortingOrder = 5;
-            float logoScale = 5.0f / Mathf.Max(1, logo.rect.width) * 16f;   // 目標幅 ~5.0u
+            float logoScale = 9.6f / Mathf.Max(1, logo.rect.width) * 16f;   // 目標幅 ~9.6u
             logoGo.transform.localScale = Vector3.one * logoScale;
             ts.logo = logoSr;
 
-            // フレーバー
+            // フレーバー(ロゴの下、間を空ける)
             var flavGo = new GameObject("Flavor", typeof(TextMeshPro));
             var flav = flavGo.GetComponent<TextMeshPro>();
-            flav.font = font; flav.fontSize = 3.9f; flav.alignment = TMPro.TextAlignmentOptions.Center;
-            flav.color = new Color(0.62f, 0.67f, 0.78f);
+            flav.font = font; flav.fontSize = 3.4f; flav.alignment = TMPro.TextAlignmentOptions.Center;
+            flav.color = new Color(0.55f, 0.6f, 0.72f);
             flav.text = "エンドロールの いちばん下から。";
-            flavGo.transform.position = new Vector3(0f, 1.35f, 0f);
+            flavGo.transform.position = new Vector3(0f, 0.15f, 0f);
             ts.flavor = flav;
 
             // --- Canvas (なまえ入力 / PLAY / 設定) ---
@@ -1041,6 +1041,13 @@ namespace L8000.EditorTools
             ts.hint = hintTxt;
 
             nameStepGo.gameObject.SetActive(false);   // 初期は非表示(PLAY で出る)
+
+            // 起動フェード(黒→透明)。Canvas の最前面。
+            var fadeGo = MakeUI(canvasGo.transform, "BootFade", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000, 4000));
+            var fadeImg = fadeGo.gameObject.AddComponent<UnityEngine.UI.Image>();
+            fadeImg.color = Color.black;
+            fadeGo.SetAsLastSibling();
+            ts.fadeOverlay = fadeImg;
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, TitleScenePath);
