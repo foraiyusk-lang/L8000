@@ -52,14 +52,18 @@ namespace L8000
             _bgm.volume = bgmVolume;
             _bgm.clip = _bgmFwd;
 
+            // 砂嵐は別の子 GO に(BGM のフィルタと相互作用させない)
+            var hissGo = new GameObject("Hiss");
+            hissGo.transform.SetParent(bgmGo.transform, false);
+            _hiss = hissGo.AddComponent<AudioSource>();
+            _hiss.clip = WhiteNoise(2f);
+            _hiss.loop = true; _hiss.playOnAwake = false; _hiss.spatialBlend = 0f; _hiss.volume = 0f;
+
             // 「音が歪む」用のフィルタを先に付けておく(実行時 AddComponent は
             // 物理コールバック中に呼ばれると失敗するため)。既定は無効。
             _dist = bgmGo.AddComponent<AudioDistortionFilter>(); _dist.distortionLevel = 0f; _dist.enabled = false;
             _lp = bgmGo.AddComponent<AudioLowPassFilter>();   _lp.cutoffFrequency = 22000f; _lp.enabled = false;
             _hp = bgmGo.AddComponent<AudioHighPassFilter>();  _hp.cutoffFrequency = 10f;    _hp.enabled = false;
-            _hiss = bgmGo.AddComponent<AudioSource>();
-            _hiss.clip = WhiteNoise(2f);
-            _hiss.loop = true; _hiss.playOnAwake = false; _hiss.spatialBlend = 0f; _hiss.volume = 0f;
 
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;
