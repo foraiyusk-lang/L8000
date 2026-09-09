@@ -488,7 +488,17 @@
   本編と同じマルモニカ・寒色モノクロ+赤の一点・淡々としたコピー・大きな余白。
   → 構図/文言はたたき台。ユーザー反応待ち。
 
+### 済(2026-09-09 14:00頃) — Windows64 ビルド最終確認(コミットなし・検証のみ)
+- **ビルド**: StandaloneWindows64 / development / 16.1s / 157.45MB / **0 error 0 warning**。
+- **run.log**(batchmode + windowed 両方): 例外・NullRef・missing・shader fallback **なし**。
+  唯一 `d3d12: failed to query info queue interface (0x80004002)` が出るが、
+  これは D3D12 デバッグレイヤ未導入の development ビルドで必ず出る無害ログ(GTX1650 実機で正常描画)。
+- **エディタ Play 確認**:
+  - Title: FB8 ロゴ(残り / 8UUU オドメーター / 赤ボタン回)描画・FadeIn 解除・PLAY/設定 ボタンあり。
+  - Main: tiles=402 / GateSeal=7 / missingScript=0 / SabotageDirector・AudioManager・WallL/R・NoiseCanvas・Hiss すべて存在。console error/warning=0。
+- ⚠️ FB8 ロゴの数字はやはり抽象的(8000/7999 の上下を切るため「8UUU / コ¬¬¬」に見える)。ユーザー反応待ちのまま。
+
 ### 次にやること
-1. 提出物(A3/A4)のユーザーFB → 構図・文言の調整。
-2. タイトルロゴ(FB8)のユーザーFB → 微調整 or 別案。
-3. Windows64 ビルドで提出物以外の最終確認(前回クリーン)。
+1. 提出物(A3/A4 = `print/poster_a3.png` `print/howto_a4.png`)のユーザーFB → 構図・文言の調整。
+2. タイトルロゴ(FB8 = `Assets/Art/logo.png`)のユーザーFB → 数字カットを浅く / 末尾1桁だけロール / 数字を大きく など微調整 or 別案。
+3. 1・2 が来ない場合: BGM/SE の逆再生・歪みの実機聴取(ユーザーのみ可能)を依頼。
