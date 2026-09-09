@@ -30,8 +30,8 @@ namespace L8000
 
         [Range(0.1f, 1f)] public float thickness = 0.7f;
 
-        [Tooltip("当たり判定を左右へ広げる(片側 units)。封鎖ゲートの天井を隙間なく見せつつ塞ぐ用。")]
-        public float colliderPadX = 0f;
+        [Tooltip("true で当たり判定を常に無効(文字は表示するが素通り)。封鎖ゲートの装飾タイル用。")]
+        public bool noCollider = false;
 
         public bool Destroyed { get; private set; }
 
@@ -136,7 +136,7 @@ namespace L8000
                 if (ch.topRight.y > maxY) maxY = ch.topRight.y;
             }
 
-            if (!any || gone || strike)
+            if (!any || gone || strike || noCollider)
             {
                 box.enabled = false;
             }
@@ -149,17 +149,16 @@ namespace L8000
                 float fullH = (maxY - minY) * k;
                 float cy = (minY + maxY) * 0.5f * k;
 
-                float padW = w + Mathf.Max(0f, colliderPadX) * 2f;
                 if (thinTop)
                 {
                     float h = CellHeight * Mathf.Max(0.05f, sizeScale) * thickness;
                     float top = cy + fullH * 0.5f;
-                    box.size = new Vector2(Mathf.Max(0.05f, padW), Mathf.Max(0.05f, h));
+                    box.size = new Vector2(Mathf.Max(0.05f, w), Mathf.Max(0.05f, h));
                     box.offset = new Vector2(cx, top - h * 0.5f);
                 }
                 else
                 {
-                    box.size = new Vector2(Mathf.Max(0.05f, padW), Mathf.Max(0.05f, fullH));
+                    box.size = new Vector2(Mathf.Max(0.05f, w), Mathf.Max(0.05f, fullH));
                     box.offset = new Vector2(cx, cy);
                 }
             }
@@ -175,7 +174,8 @@ namespace L8000
             _builtScale = sizeScale;
         }
 
-        static readonly string GarbleChars = "▓▒░#※§¤‡†◆■◇□×";
+        // MaruMonica にあるグリフのみ(░▒▓等は非対応)。〓 は日本語文字化けの定番。
+        static readonly string GarbleChars = "█▉▊▌▎■□〓※×＃─│┼";
         static string Mojibake(string s)
         {
             if (string.IsNullOrEmpty(s)) return s;

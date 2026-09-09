@@ -404,7 +404,8 @@ namespace L8000.EditorTools
                 "英字かなカナ漢字記号数字 消失 画面の水平 だれも消さずに下まで戻った いくつかの名前はもう戻らない " +
                 "多くの名前が無くなった ほとんど何も残らなかったそれでも戻ってきた 指が止まったここまでだった " +
                 "動けなくなって名前ごと沈んだ ██ 　0123456789()/.,:;'\"!?&+- " +
-                "音が歪む 効果音 物理 描画 翻訳 照明 言葉 進行管理 もどした なまえをいれてください";
+                "音が歪む 効果音 物理 描画 翻訳 照明 言葉 進行管理 もどした なまえをいれてください " +
+                "█▉▊▋▌▍▎▏░▒▓■□▚▞▙▟▛▜╳╱╲─│┼※#×〓＃";   // 文字化け用
             foreach (char c in extra) if (!char.IsControl(c)) chars.Add(c);
             fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;   // 追加のため一時的に
             var arr = new char[chars.Count]; chars.CopyTo(arr);

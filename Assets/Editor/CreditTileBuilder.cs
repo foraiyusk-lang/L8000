@@ -88,6 +88,8 @@ namespace L8000.EditorTools
             root.position = Vector3.zero;
             var roll = CreditsMarkup.Parse(creditsText, layout);
             foreach (var t in root.GetComponentsInChildren<CreditTile>(true)) Object.DestroyImmediate(t.gameObject);
+            for (int i = root.childCount - 1; i >= 0; i--)
+                if (root.GetChild(i).name == "GateSeal") Object.DestroyImmediate(root.GetChild(i).gameObject);
             var parent = root;
 
             var specs = roll.Lines.ToList();
@@ -306,101 +308,93 @@ namespace L8000.EditorTools
                     s1.c.transform.position = new Vector3(s0.w * 0.5f + s1.w * 0.5f, standY, 0f);
                 }
             }
-            // 3) 天井: 画面幅(±CeilEdge)を塞ぐ。見た目は文字どうしに小さな隙間を空けて
-            //    「名前の壁」として読めるようにし、当たり判定だけ colliderPadX で左右へ広げて連結する。
-            //    saboTile は中央付近。余りは上の足場へ。
+            // 3) 天井 = 見えない封鎖コライダ(GateSeal)+ 中央の saboTile。
+            //    封鎖は GateSeal が担う。saboTile だけが中央の穴を塞ぎ、撃つと開く。
+            //    他タイルは天井高さに「文字だけ」並べる(当たり判定なし)= 名前の壁の見た目。
             const float CeilEdge = HalfW + 0.9f;
-            const float CeilPad  = 0.45f;   // 天井タイルのコライダを片側へ広げる量
-            const float CeilGap  = 0.5f;    // 文字どうしの見た目の隙間(< プレイヤー幅 0.22*2 + pad で塞がる)
-            float ceilY = standY + 2.1f;   // 台からジャンプ→頭が天井を越える高さ
-            float need = CeilEdge * 2f;
+            float ceilY = standY + 2.1f;
 
-            var pick = new List<Tile> { gate.saboTile };
-            float have = gate.saboTile.w;
-            foreach (var t in ceilTiles.OrderByDescending(t => t.w))
-            {
-                if (have >= need) break;
-                pick.Add(t); have += t.w + CeilGap;
-            }
-            foreach (var t in pick) t.c.colliderPadX = CeilPad;   // コライダだけ広げて連結
-            var leftover = ceilTiles.Where(t => !pick.Contains(t)).ToList();
+            gate.saboTile.c.transform.position = new Vector3(0f, ceilY, 0f);
 
-            // saboTile を必ず中央に(プレイヤーは中央の台から真上へ撃つ)
-            var others = pick.Where(t => t != gate.saboTile).ToList();
-            int half = others.Count / 2;
-            var ordered = new List<Tile>();
-            ordered.AddRange(others.Take(half));
-            ordered.Add(gate.saboTile);
-            ordered.AddRange(others.Skip(half));
-
-            if (ordered.Count == 1)
+            // 穴の上の着地足場(必須): ceilTiles から 2枚。穴(x=0)を避けて右へ。
+            var landing = new List<Tile>();
+            float landY = ceilY + 2.4f;
             {
-                gate.saboTile.c.transform.position = new Vector3(0f, ceilY, 0f);
-            }
-            else
-            {
-                float totalW = ordered.Sum(t => t.w);
-                float step = (need - totalW) / (ordered.Count - 1);   // 負なら重なり
-                float cur = -CeilEdge;
-                foreach (var t in ordered)
+                float lix = 0.7f;
+                for (int n = 0; n < 2 && ceilTiles.Count > 0; n++)
                 {
-                    t.c.transform.position = new Vector3(cur + t.w * 0.5f, ceilY, 0f);
-                    cur += t.w + step;
+                    var lt = ceilTiles[0]; ceilTiles.RemoveAt(0);
+                    lt.c.transform.position = new Vector3(lix + lt.w * 0.5f, landY, 0f);
+                    lix += lt.w + WordGap;
+                    landing.Add(lt);
                 }
-                // saboTile を確実に x≈0 へ: いちばん中央に近いタイルと位置を入れ替える。
-                // (天井全体をずらすと端のシールが甘くなるため、1枚だけ交換する)
-                Tile mid = ordered.OrderBy(t => Mathf.Abs(t.c.transform.position.x)).First();
-                if (mid != gate.saboTile)
-                {
-                    var pa = gate.saboTile.c.transform.position;
-                    var pb = mid.c.transform.position;
-                    gate.saboTile.c.transform.position = pb;
-                    mid.c.transform.position = pa;
-                }
-                // 残りのズレ(タイル幅ぶん)は小さく平行移動で詰める
-                float shift = Mathf.Clamp(-gate.saboTile.c.transform.position.x, -0.9f, 0.9f);
-                foreach (var t in ordered)
-                    t.c.transform.position += new Vector3(shift, 0f, 0f);
             }
 
-            // 4) 天井の上: 撃ち抜いた穴(x=0)の真上は必ず空ける。着地足場は左右へ寄せて置く。
-            float maxY = ceilY;   // 実際にタイルを置いた最高 y(セクション末尾の高さ計算用)
-            y = ceilY + 2.3f;     // 穴からダブルジャンプで届く高さ
-            if (leftover.Count > 0)
+            // 装飾タイル(当たり判定なし)を天井の左右へ交互に散らす
+            var leftover = new List<Tile>();
+            float saboHalf = Mathf.Max(0.9f, gate.saboTile.w * 0.5f);
+            float dlx = -saboHalf - 0.3f, drx = saboHalf + 0.3f;
+            bool toRight = true;
+            foreach (var t in ceilTiles)
             {
-                const float rowMax = HalfW - 0.6f;   // 片側ぶんの幅
-                int idx = 0, sideL = 1;
-                while (idx < leftover.Count)
-                {
-                    var row = new List<Tile>();
-                    float rw = 0f;
-                    while (idx < leftover.Count && (row.Count == 0 || rw + leftover[idx].w + WordGap <= rowMax))
-                    { rw += leftover[idx].w + (row.Count > 0 ? WordGap : 0f); row.Add(leftover[idx]); idx++; }
-                    // 穴の真上(x=0 周辺)を避けて左右どちらかに寄せる
-                    float ix = sideL > 0 ? 0.8f : -0.8f - rw;
-                    foreach (var t in row) { t.c.transform.position = new Vector3(ix + t.w * 0.5f, y, 0f); ix += t.w + WordGap; }
-                    maxY = y;
-                    sideL = -sideL;
-                    if (sideL > 0) y += StepUp;
-                }
-                y = maxY + StepUp;
+                t.c.noCollider = true;
+                if (toRight && drx + t.w <= CeilEdge) { t.c.transform.position = new Vector3(drx + t.w * 0.5f, ceilY, 0f); drx += t.w + 0.45f; toRight = false; }
+                else if (dlx - t.w >= -CeilEdge)     { t.c.transform.position = new Vector3(dlx - t.w * 0.5f, ceilY, 0f); dlx -= t.w + 0.45f; toRight = true; }
+                else if (drx + t.w <= CeilEdge)      { t.c.transform.position = new Vector3(drx + t.w * 0.5f, ceilY, 0f); drx += t.w + 0.45f; }
+                else leftover.Add(t);
             }
-            side = -1;
+
+            // GateSeal: sabo の左右を塞ぐ見えないコライダ
+            {
+                UnityEngine.Physics2D.SyncTransforms();
+                var sbnd = gate.saboTile.c.GetComponent<BoxCollider2D>().bounds;
+                float sL = sbnd.min.x - 0.1f, sR = sbnd.max.x + 0.1f;
+                var seal = new GameObject("GateSeal");
+                seal.transform.SetParent(gate.saboTile.c.transform.parent, false);
+                int gl = LayerMask.NameToLayer("Ground");
+                if (gl >= 0) seal.layer = gl;
+                float h = CreditTile.CellHeight * 0.95f;
+                MakeSealBox(seal, (-CeilEdge + sL) * 0.5f, ceilY, sL - (-CeilEdge), h);
+                MakeSealBox(seal, (CeilEdge + sR) * 0.5f, ceilY, CeilEdge - sR, h);
+            }
+
+            // 4) 天井の上: 着地足場より上へ、余りタイル + 残りの行を中央始点の階段で。
+            float maxY = landing.Count > 0 ? landY : ceilY;
+            y = maxY + StepUp;
+            // 余ったタイルは天井の一段下に装飾として散らす(当たり判定なし)
+            float ex = -CeilEdge + 1f;
+            foreach (var t in leftover)
+            {
+                t.c.noCollider = true;
+                t.c.transform.position = new Vector3(ex + t.w * 0.5f, ceilY - 1.1f, 0f);
+                ex += t.w + 0.5f;
+                if (ex > CeilEdge) ex = -CeilEdge + 1f;
+            }
+            float ux = 0f; int ud = 1;
             for (int i = gi + 1; i < lines.Count; i++)
             {
                 var l = lines[i];
                 if (used.Contains(l)) continue;
-                if (l.isHeader) { PlaceLine(l, 0f, y); maxY = y; y += StepUp + 0.2f; continue; }
-                float x = side * (1.1f + l.Width * 0.5f);
-                PlaceLine(l, x, y);
+                if (l.isHeader) { PlaceLine(l, 0f, y); maxY = y; y += StepUp + 0.2f; ux = 0f; continue; }
+                PlaceLine(l, ux, y);
                 maxY = y;
-                side = -side;
+                ux += ud * StepAcross;
+                if (ux > HalfW - 1.5f) ud = -1;
+                else if (ux < -HalfW + 1.5f) ud = 1;
                 y += StepUp;
             }
-            return maxY + StepUp;   // 次セクションは maxY + StepUp + SectionGap 上に始まる
+            return maxY + StepUp;
         }
 
         // ---- 生成ヘルパ ----
+        static void MakeSealBox(GameObject go, float cx, float cy, float w, float h)
+        {
+            if (w <= 0.05f) return;
+            var box = go.AddComponent<BoxCollider2D>();
+            box.offset = new Vector2(cx, cy);
+            box.size = new Vector2(w, h);
+        }
+
         static CreditTile MakeTile(Transform parent, TMP_FontAsset font, string text,
             bool isName, bool isHeader, bool isRule, float scale, string sourceLine, bool wide)
         {
