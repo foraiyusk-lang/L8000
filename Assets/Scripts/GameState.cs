@@ -10,8 +10,8 @@ namespace L8000
     {
         public static GameState Instance { get; private set; }
 
-        [Tooltip("開始時の残り回数。")]
-        public int startingActions = 8000;
+        [Tooltip("開始時の残り回数。TGS 出展ビルドは時間の都合で 2000。")]
+        public int startingActions = 2000;
 
         [Tooltip("消費倍率。Producer 破壊などで増える(1.5 等)。")]
         public float spendMultiplier = 1f;

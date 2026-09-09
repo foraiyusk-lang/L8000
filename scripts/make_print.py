@@ -27,14 +27,16 @@ ART = os.path.join(_ROOT, "Assets", "Art")
 DPI = 200
 MM = DPI / 25.4
 
-# --- 配色: 黒地 + 寒色の白 + 赤の一点。中間トーンは「読める」明るさに寄せる ---
-BG    = (9, 10, 13)       # 地(ゲームの黒)
-INK   = (235, 241, 250)   # 主文字
-MID   = (190, 200, 216)   # 副文字(これでも普通に読める明るさ)
-DIM   = (146, 156, 174)   # 補足(32px 未満では使わない)
-LINE  = (108, 118, 138)   # 罫・目盛り
-RED   = (214, 84, 72)     # 押しボタンの赤(唯一の色み)
-WARM  = (223, 191, 108)   # ビーム
+# --- 配色: 黒地 + 白 + 赤の一点だけ。文字は原則まっ白、遠目でも読める ---
+BG    = (8, 9, 11)        # 地(ゲームの黒)
+INK   = (250, 250, 252)   # 主文字 = ほぼ純白
+SOFT  = (216, 218, 224)   # 副文字(すこしだけ落とした白)
+DIM   = (122, 125, 134)   # 遠景のクレジットのみ
+LINE  = (92, 96, 108)     # 罫・目盛り
+RED   = (224, 68, 56)     # 唯一の色。押しボタンの赤。強く使う
+RED_HI = (244, 122, 108)
+WARM  = RED               # ビームも赤(色は1色に絞る)
+MID   = SOFT              # 後方互換(A4 が参照)
 VOID  = (4, 4, 6)         # 「無」
 
 _fc = {}
@@ -79,16 +81,29 @@ def dotrule(dr, x0, x1, y, color=LINE, seg=16, gap=12, w=3):
         x += seg + gap
 
 
-# キービジュアルの梯子 = 足場にする「仕事」。credits.txt に実在する役職から、
-# 壊すと歪みが起きる担当を上から順に(いちばん下は The Producer)。
-LADDER_ROLES = [
-    "Lead Game Designer",
-    "Physics Programmer",
-    "Rendering Engineer",
-    "Music",
-    "Sound Director",
-    "Lighting Artist",
-    "The Producer",
+def credit_all():
+    """credits.txt の「名前  役職」を全部(背景のスタッフロール用)。"""
+    rows = []
+    with open(os.path.join(_ROOT, "Assets", "Credits", "credits.txt"), encoding="utf-8") as fh:
+        for ln in fh:
+            ln = ln.strip()
+            if ln.startswith(("//", "#", "=", "~", "[")) or "::" not in ln:
+                continue
+            role, name = [p.strip() for p in ln.split("::", 1)]
+            if name and name != "???" and role != "???":
+                rows.append(name + "   " + role)
+    return rows
+
+
+# 右側に置く本文(ゲームの声。宣伝しない。開催情報も書かない)。
+POSTER_BODY = [
+    "名前を ひとつ 撃つと、床が 一枚 でき、",
+    "その人が 支えていた 何かが すこし 狂う。",
+    "音。光。重力。文字。",
+    "",
+    "のぼりきると 巻き戻りが 止まり、",
+    "あとは 来た道を 降りるだけ。",
+    "―― 下から、無が 来ている。",
 ]
 
 
@@ -100,66 +115,71 @@ def make_poster():
     W, H = int(420 * MM), int(297 * MM)
     cv = Image.new("RGBA", (W, H), BG + (255,))
     dr = ImageDraw.Draw(cv)
-    pad = int(22 * MM)
+    pad = int(18 * MM)
 
-    void_y = int(H * 0.855)
-    axis_x = int(W * 0.36)              # 登りの軸(画面の中央やや左)
+    void_y = int(H * 0.87)
+    split_x = int(W * 0.50)            # 左=クレジットの壁 / 右=言葉
 
-    # --- ロゴ = 登り着く先。軸の真上に置く ---
     logo = Image.open(os.path.join(ART, "logo.png")).convert("RGBA")
     lw = int(W * 0.30)
     logo = logo.resize((lw, int(lw * logo.height / logo.width)), Image.NEAREST)
-    logo_x = axis_x - int(lw * 0.34)
+    logo_x = int(W * 0.12)
     logo_y = pad
+    logo_bot = logo_y + logo.height
+
+    wall_l = int(W * 0.11)
+    path_x = wall_l - int(9 * MM)      # ビーム = 壁のすぐ左を上へ
+
+    # === 赤いビーム + プレイヤー。ロゴ(頂上)からプレイヤーまで1本 ===
+    py = int(void_y - int(20 * MM))
+    ps = int(10 * MM)
+    dr.rectangle([path_x - int(4 * MM), logo_y + int(8 * MM),
+                  path_x + int(4 * MM), py], fill=RED)
+
+    # === 左半分 = スタッフロールそのもの。ロゴの下から名前がびっしり上へ ===
+    roll = credit_all()
+    lh = int(5.6 * MM)
+    col_w = int((split_x - wall_l - int(4 * MM)) / 2)
+    wall_top = logo_bot + int(9 * MM)
+    wall_bot = py - int(8 * MM)
+    ci, cy = 0, wall_top
+    for s in roll:
+        if ci >= 2:
+            break
+        txt(cv, s, wall_l + ci * col_w, cy, 18, (158, 161, 170))
+        cy += lh
+        if cy > wall_bot:
+            ci, cy = ci + 1, wall_top
+
+    # === ロゴ = 登り着く先。左上 ===
     paste(cv, logo, logo_x, logo_y)
 
-    ladder_top = logo_y + logo.height + int(20 * MM)
-    ladder_bot = void_y - int(20 * MM)
+    # プレイヤー(白1マス)+ 足場
+    dr.rectangle([path_x - int(3 * MM), py + ps + int(2 * MM),
+                  path_x + int(64 * MM), py + ps + int(2 * MM) + 6], fill=INK)
+    dr.rectangle([path_x - ps // 2, py, path_x + ps // 2, py + ps], fill=INK)
 
-    # --- 梯子 = 足場にした「仕事」。軸に沿って役職名を並べる ---
-    dr.line([(axis_x, ladder_top - int(6 * MM)), (axis_x, ladder_bot + int(8 * MM))],
-            fill=LINE, width=3)
-    rungs = LADDER_ROLES
-    n = max(1, len(rungs))
-    player_i = n - 2
-    for i, s in enumerate(rungs):
-        ry = ladder_top + int((ladder_bot - ladder_top) * i / max(1, n - 1))
-        near = abs(i - player_i) <= 1
-        dr.rectangle([axis_x - int(5 * MM), ry + int(5 * MM),
-                      axis_x + int(5 * MM), ry + int(5 * MM) + 3], fill=LINE)
-        txt(cv, s, axis_x + int(13 * MM), ry, 32, INK if near else MID)
+    # === 右半分 = 言葉。うっすら明るい面 + 赤い縁で、壁から立ち上げる ===
+    dr.rectangle([split_x, 0, W, void_y], fill=(22, 23, 28))
+    dr.rectangle([split_x, 0, split_x + 8, void_y], fill=RED)
 
-    # 足場 + プレイヤー(白1マス)+ ロゴへ伸びるビーム
-    py = ladder_top + int((ladder_bot - ladder_top) * player_i / max(1, n - 1))
-    ps = int(7 * MM)
-    dr.rectangle([axis_x - int(9 * MM), py + ps + int(2 * MM),
-                  axis_x + int(74 * MM), py + ps + int(2 * MM) + 4], fill=INK)
-    dr.rectangle([axis_x + ps // 2 - 3, logo_y + logo.height - int(2 * MM),
-                  axis_x + ps // 2 + 3, py], fill=WARM)
-    dr.rectangle([axis_x, py, axis_x + ps, py + ps], fill=INK)
+    tx = split_x + int(15 * MM)
+    ty = pad + int(18 * MM)
+    for s in ["エンドロールを、", "いちばん下から", "登る。"]:
+        txt(cv, s, tx, ty, 104, INK)
+        ty += int(26 * MM)
+    ty += int(14 * MM)
+    for s in POSTER_BODY:
+        if s:
+            txt(cv, s, tx, ty, 32, SOFT)
+        ty += int(17 * MM)
 
-    # 梯子の下端 = 最初の線
-    txt(cv, "＝＝＝＝   Thank you for playing.",
-        axis_x + int(13 * MM), ladder_bot + int(4 * MM), 32, MID)
-
-    # --- タグライン = 右上の空きを使う(梯子の上部と高さを合わせる)---
-    tx = int(W * 0.57)
-    ty = int(H * 0.17)
-    ty += txt(cv, "エンドロールを、", tx, ty, 64, INK) + int(12 * MM)
-    ty += txt(cv, "いちばん下から登る。", tx, ty, 64, INK) + int(24 * MM)
-    for s in ["巻き戻しが止まる前に、頂上のタイトルへ。",
-              "名前を壊せば、足場が空く。",
-              "壊しすぎれば、世界のほうが歪む。"]:
-        ty += txt(cv, s, tx, ty, 32, MID) + int(9 * MM)
-
-    # --- 下端: 「無」。ハードに断ち切る ---
+    # === 下端: 「無」。全幅をハードに断つ。縁は赤 ===
     dr.rectangle([0, void_y, W, H], fill=VOID)
-    dr.rectangle([0, void_y, W, void_y + 7], fill=LINE)
-    txt(cv, "下から、無がのぼってくる。止まると、飲まれる。",
-        pad, void_y + int(12 * MM), 32, MID)
-    foot = "残り8000回   ／   Null Interactive   ／   Tokyo Game Show 2026"
-    fg = text_img(foot, 32, DIM)
-    paste(cv, fg, W - pad - fg.width, H - pad - fg.height)
+    dr.rectangle([0, void_y, W, void_y + 9], fill=RED)
+    txt(cv, "止まると、飲まれる。", wall_l, void_y + int(15 * MM), 44, INK)
+    foot = text_img("残り8000回        Null Interactive", 28, SOFT)
+    paste(cv, foot, W - pad - foot.width, H - pad - foot.height)
 
     out = os.path.join(_ROOT, "print", "poster_a3.png")
     cv.convert("RGB").save(out, dpi=(DPI, DPI))
@@ -239,11 +259,20 @@ def make_howto():
         y += kh + int(4 * MM)
 
     y += int(7 * MM)
-    block(colR, y, "残り回数", [
+    y = block(colR, y, "残り回数", [
         "歩く・跳ぶ・撃つ ―― どれも 1回ぶん。",
         "長押しでも BackSpace でも 減らない。",
         "「無」に捕まると 100。0 で 指が止まる。",
     ])
+
+    # TGS 出展の注記(赤で囲って目立たせる)
+    y += int(4 * MM)
+    note = "TGS 出店時には 時間の関係上 残り回数は 2000回 となっています"
+    ng = text_img(note, 28, INK)
+    dr.rectangle([colR - int(3 * MM), y - int(3 * MM),
+                  colR + ng.width + int(6 * MM), y + ng.height + int(4 * MM)],
+                 outline=RED, width=3)
+    paste(cv, ng, colR + int(2 * MM), y + int(1 * MM))
 
     # --- フッタ ---
     fr = H - pad - int(4 * MM)

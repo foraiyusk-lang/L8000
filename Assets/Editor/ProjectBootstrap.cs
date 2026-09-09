@@ -641,7 +641,7 @@ namespace L8000.EditorTools
             // --- ゲーム状態 (残り回数) --------------------------------
             var stateGo = new GameObject("GameState");
             var state = stateGo.AddComponent<GameState>();
-            state.startingActions = 8000;
+            state.startingActions = 2000;   // TGS 出展ビルドは時間の都合で 2000
 
             // --- HUD (残り回数表示) ----------------------------------
             var canvasGo = new GameObject("HUD Canvas", typeof(RectTransform));
@@ -659,7 +659,7 @@ namespace L8000.EditorTools
             label.fontSize = 34f;
             label.color = new Color(0.85f, 0.9f, 1f);
             label.alignment = TMPro.TextAlignmentOptions.TopLeft;
-            label.text = "残り 8000";
+            label.text = "残り 2000";
             var lrt = label.rectTransform;
             lrt.anchorMin = new Vector2(0f, 1f);
             lrt.anchorMax = new Vector2(0f, 1f);

@@ -26740,7 +26740,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56c961492d7c9064192126f08669a2e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::L8000.GameState
-  startingActions: 8000
+  startingActions: 2000
   spendMultiplier: 1
 --- !u!4 &456873709
 Transform:
