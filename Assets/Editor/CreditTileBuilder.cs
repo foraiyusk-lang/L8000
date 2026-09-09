@@ -26,7 +26,7 @@ namespace L8000.EditorTools
         const float HalfW      = 7.2f;
         const float StepUp     = 1.25f;   // 1行の高さ送り
         const float StepAcross = 2.6f;    // 階段1段の横送り
-        const float SectionGap = 1.8f;
+        const float SectionGap = 1.3f;
         const float WordGap    = 0.16f;   // 行内の単語どうしの隙間
 
         [MenuItem("L8000/Build Credit Tiles from credits.txt")]
@@ -352,7 +352,8 @@ namespace L8000.EditorTools
             }
 
             // 4) 天井の上: 撃ち抜いた穴(x=0)の真上は必ず空ける。着地足場は左右へ寄せて置く。
-            y = ceilY + 2.5f;   // 穴からダブルジャンプで届く高さ
+            float maxY = ceilY;   // 実際にタイルを置いた最高 y(セクション末尾の高さ計算用)
+            y = ceilY + 2.3f;     // 穴からダブルジャンプで届く高さ
             if (leftover.Count > 0)
             {
                 const float rowMax = HalfW - 0.6f;   // 片側ぶんの幅
@@ -366,23 +367,25 @@ namespace L8000.EditorTools
                     // 穴の真上(x=0 周辺)を避けて左右どちらかに寄せる
                     float ix = sideL > 0 ? 0.8f : -0.8f - rw;
                     foreach (var t in row) { t.c.transform.position = new Vector3(ix + t.w * 0.5f, y, 0f); ix += t.w + WordGap; }
+                    maxY = y;
                     sideL = -sideL;
                     if (sideL > 0) y += StepUp;
                 }
-                y += StepUp;
+                y = maxY + StepUp;
             }
             side = -1;
             for (int i = gi + 1; i < lines.Count; i++)
             {
                 var l = lines[i];
                 if (used.Contains(l)) continue;
-                if (l.isHeader) { PlaceLine(l, 0f, y); y += StepUp + 0.2f; continue; }
+                if (l.isHeader) { PlaceLine(l, 0f, y); maxY = y; y += StepUp + 0.2f; continue; }
                 float x = side * (1.1f + l.Width * 0.5f);
                 PlaceLine(l, x, y);
+                maxY = y;
                 side = -side;
                 y += StepUp;
             }
-            return y + 0.4f;
+            return maxY + StepUp;   // 次セクションは maxY + StepUp + SectionGap 上に始まる
         }
 
         // ---- 生成ヘルパ ----
