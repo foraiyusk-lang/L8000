@@ -30,6 +30,13 @@ namespace L8000.EditorTools
         [MenuItem("L8000/Build Slice 1 Scene")]
         public static void BuildMenu() => Build();
 
+        [MenuItem("L8000/Rebake Font")]
+        public static void RebakeFontMenu()
+        {
+            var f = EnsureFontAsset();
+            Debug.Log($"[L8000] font rebaked: {(f != null ? f.characterTable.Count : 0)} glyphs");
+        }
+
         // -----------------------------------------------------------------
         // ヘッドレスで Play して数秒後にカメラをPNG保存する検証用。
         //   Unity.exe -batchmode -projectPath <repo> -executeMethod L8000.EditorTools.ProjectBootstrap.PlayCapture
@@ -399,14 +406,19 @@ namespace L8000.EditorTools
             if (credits != null)
                 foreach (char c in credits.text) if (!char.IsControl(c)) chars.Add(c);
             const string extra =
-                "残り8000回 PLAYED BY 名も無き声 巻き戻しが止まる もどっている ↓ ▼ ▶ ― " +
+                "残り8000回 PLAYED BY 名も無き声 名も無き登坂者 巻き戻しが止まる もどっている ↓ ▼ ▶ ― " +
                 "なまえ はじめる とじる 設定 効果音 音量 BGM Enter エンドロールのいちばん下から。 " +
+                "↓ Enter で この線を 抜ける " +   // 降りのヒント(線・抜)
                 "英字かなカナ漢字記号数字 消失 画面の水平 だれも消さずに下まで戻った いくつかの名前はもう戻らない " +
                 "多くの名前が無くなった ほとんど何も残らなかったそれでも戻ってきた 指が止まったここまでだった " +
-                "動けなくなって名前ごと沈んだ ██ 　0123456789()/.,:;'\"!?&+- " +
+                "動けなくなって名前ごと沈んだ ██ 　0123456789()/.,:;'\"!?&+-_ " +   // _ = TMP の取り消し線/下線に必要
                 "音が歪む 効果音 物理 描画 翻訳 照明 言葉 進行管理 もどした なまえをいれてください " +
                 "█▉▊▋▌▍▎▏░▒▓■□▚▞▙▟▛▜╳╱╲─│┼※#×〓＃";   // 文字化け用
             foreach (char c in extra) if (!char.IsControl(c)) chars.Add(c);
+            // かな全域(ひらがな U+3041–309F / カタカナ U+30A0–30FF)。
+            //   名前入力でかな名を「?」にしないため。漢字は静的ベイクしない(atlas 肥大回避)。
+            for (int cp = 0x3041; cp <= 0x309F; cp++) chars.Add((char)cp);
+            for (int cp = 0x30A0; cp <= 0x30FF; cp++) chars.Add((char)cp);
             fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;   // 追加のため一時的に
             var arr = new char[chars.Count]; chars.CopyTo(arr);
             fontAsset.TryAddCharacters(new string(arr), out string missing);
