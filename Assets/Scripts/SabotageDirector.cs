@@ -50,6 +50,9 @@ namespace L8000
         void OnTileDestroyed(CreditTile tile, string chars)
         {
             if (tile == null) return;
+            // 歪みが出るのは「担当ロール名」を撃ったときだけ。人の名前(:: の後)や
+            // 封鎖ゲートの足場に流用された名前タイルでは発動しない。
+            if (tile.isName) return;
             // タイルの元になった行(役割名)で判定。役割部分だけ見る(":: 名前" の前)。
             string src = tile.sourceLine ?? "";
             int sep = src.IndexOf("::");

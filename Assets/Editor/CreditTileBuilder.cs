@@ -344,9 +344,18 @@ namespace L8000.EditorTools
                     t.c.transform.position = new Vector3(cur + t.w * 0.5f, ceilY, 0f);
                     cur += t.w + step;
                 }
-                // saboTile がちょうど x=0 に来るよう天井全体を平行移動(端の余白 0.9 で吸収)
-                float shift = -gate.saboTile.c.transform.position.x;
-                shift = Mathf.Clamp(shift, -0.8f, 0.8f);
+                // saboTile を確実に x≈0 へ: いちばん中央に近いタイルと位置を入れ替える。
+                // (天井全体をずらすと端のシールが甘くなるため、1枚だけ交換する)
+                Tile mid = ordered.OrderBy(t => Mathf.Abs(t.c.transform.position.x)).First();
+                if (mid != gate.saboTile)
+                {
+                    var pa = gate.saboTile.c.transform.position;
+                    var pb = mid.c.transform.position;
+                    gate.saboTile.c.transform.position = pb;
+                    mid.c.transform.position = pa;
+                }
+                // 残りのズレ(タイル幅ぶん)は小さく平行移動で詰める
+                float shift = Mathf.Clamp(-gate.saboTile.c.transform.position.x, -0.9f, 0.9f);
                 foreach (var t in ordered)
                     t.c.transform.position += new Vector3(shift, 0f, 0f);
             }
