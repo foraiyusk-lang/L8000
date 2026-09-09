@@ -62,9 +62,6 @@ namespace L8000
         public static bool DebugZigzag;
         int _zzSide;         // 今乗っている行の side(接地時に確定、離地でクリア)
 
-        /// <summary>降りフェーズの受動的なにじり寄り。-1/0/1。プレイヤーが A/D を押すと無視される。</summary>
-        public int AutoDrift;
-
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
         public bool IsGrounded => _grounded;
 
@@ -171,8 +168,6 @@ namespace L8000
 
             // --- 横移動: 入力中は accel、離したら decel でピタッと ---
             float dir = (Input.GetKey(rightKey) ? 1f : 0f) - (Input.GetKey(leftKey) ? 1f : 0f);
-            // 入力が無いときだけ AutoDrift(降りフェーズ: 端/中央へ寄せる補助)
-            if (dir == 0f && AutoDrift != 0) dir = Mathf.Sign(AutoDrift);
             if (DebugAutoWalk != 0) dir = DebugAutoWalk;
             float targetX = dir * moveSpeed;
             float rate = Mathf.Abs(dir) > 0.01f ? (_grounded ? groundAccel : airAccel)

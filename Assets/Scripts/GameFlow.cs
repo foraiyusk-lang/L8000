@@ -178,32 +178,25 @@ namespace L8000
         }
 
         // --- Descent -----------------------------------------------------
-        // 降り = 「巻き戻し / 戻っている」。登ってきた足場(===== 以外)は素通りになり、
-        // 下へ流れ去っていく。プレイヤーは落下しながら A/D で左右に寄せるだけ。射撃不可。
-        // 上から無がゆっくり追う(落下のほうが速いので実質引き離せる=静かな残響)。
-        // ※ 撃って壊したタイルは登り同様「穴/取り消し線」のまま(FB: 当たり判定は登りと同じ)。
+        // 降り = 「戻っている」。当たり判定は登りと同じ(足場はソリッド)。
+        // プレイヤーは重力で落ち、登ってきた足場を伝って自分で下へ降りる。射撃は不可。
+        // 上から無がゆっくり追う(重力落下より遅いので実質引き離せる=静かな残響)。
         void BeginDescent()
         {
             _phase = Phase.Descent;
             if (cameraFollow != null) cameraFollow.enabled = false;
 
             TileField.DescentDropDestroyed = true;
-            TileField.DescentPassThrough = true;
-            streamer.RefreshAll();   // 取り消し線 + ===== 以外を素通りに
+            streamer.RefreshAll();   // 撃って壊した行は取り消し線 + 当たり判定なし(= 穴。登りと同じ)
 
+            // 頂上の足場から少し下・中央へ置いて降り出す
             if (_prb != null)
             {
                 _prb.bodyType = RigidbodyType2D.Dynamic;
-                var p = player.position; p.y -= 1.0f; player.position = p; _prb.position = p;
-                _prb.linearVelocity = new Vector2(0f, -6f);
+                var p = player.position; p.x = 0f; p.y -= 1.5f; player.position = p; _prb.position = p;
+                _prb.linearVelocity = new Vector2(0f, -4f);
             }
-            if (playerController != null)
-            {
-                playerController.enabled = true;
-                playerController.gravityScale = 4.0f;   // 通常 3.0(戻りは少し速く)
-                playerController.maxFallSpeed = 22f;    // 通常 18
-                playerController.AutoDrift = 0;
-            }
+            if (playerController != null) playerController.enabled = true;
             if (weapon != null) weapon.CanFire = false;   // 降り中は射撃不可
 
             voidRiser.Stop();
@@ -217,28 +210,18 @@ namespace L8000
             float dt = Time.deltaTime;
             var p = player.position;
 
-            // 入力が無ければ中央へゆっくり寄せる(壁に貼り付かない・画面内に留める)
-            if (playerController != null)
-                playerController.AutoDrift = p.x > 0.5f ? -1 : p.x < -0.5f ? 1 : 0;
-
-            // カメラはプレイヤーを追って下がる
+            // カメラはプレイヤーを追って下がる(落下が速いので強めに追従)
             var c = viewCamera.transform.position;
             c.y = Mathf.Lerp(c.y, p.y + 1.5f, 12f * dt);
             viewCamera.transform.position = c;
 
-            if (p.y <= streamer.BottomY + 3.0f) BeginBottom();
+            if (p.y <= streamer.BottomY + 3.0f) BeginBottom();   // 最下部付近(===== や @行 に着地)まで来たら
         }
 
         // --- Bottom (===== 突破) ---------------------------------------
         void BeginBottom()
         {
             _phase = Phase.Bottom;
-            if (playerController != null)
-            {
-                playerController.AutoDrift = 0;
-                playerController.gravityScale = 3.0f;
-                playerController.maxFallSpeed = 18f;
-            }
             voidRiser.Stop();
             // ===== のすぐ上へスナップして着地
             var p = new Vector3(Mathf.Clamp(player.position.x, -2f, 2f), streamer.BottomY + 0.9f, 0f);
