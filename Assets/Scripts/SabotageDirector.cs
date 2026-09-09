@@ -37,9 +37,12 @@ namespace L8000
         void OnEnable() => TileField.OnTileDestroyed += OnTileDestroyed;
         void OnDisable() => TileField.OnTileDestroyed -= OnTileDestroyed;
 
+        int _noiseFrame;
+
         void Update()
         {
-            if (graphicsNoise != null && graphicsNoise.enabled)
+            // 砂嵐は毎フレームではなく数フレームおきに動かす(専用 Canvas でも更新は軽く)
+            if (graphicsNoise != null && graphicsNoise.enabled && (++_noiseFrame & 1) == 0)
             {
                 var r = graphicsNoise.uvRect;
                 r.x = Random.value; r.y = Random.value;
@@ -50,17 +53,14 @@ namespace L8000
         void OnTileDestroyed(CreditTile tile, string chars)
         {
             if (tile == null) return;
-            // 歪みが出るのは「担当ロール名」を撃ったときだけ。人の名前(:: の後)や
-            // 封鎖ゲートの足場に流用された名前タイルでは発動しない。
-            if (tile.isName) return;
-            // タイルの元になった行(役割名)で判定。役割部分だけ見る(":: 名前" の前)。
+            // その行のどこか(役職語でも名前でも)を壊せば、その担当の歪みが発動する。
             string src = tile.sourceLine ?? "";
             int sep = src.IndexOf("::");
             string role = (sep >= 0 ? src.Substring(0, sep) : src).Trim();
             string r = role.ToLowerInvariant();
             if (string.IsNullOrEmpty(r)) return;
 
-            if (r.Contains("music") || r.Contains("composer")) Fire("bgm", "BGM", () => AudioManager.Instance?.StopBgm());
+            if (r.Contains("music") || r.Contains("composer")) Fire("bgm", "音が 歪む", () => AudioManager.Instance?.DistortBgm(), "");
             if (r.Contains("sound director")) Fire("sfx", "効果音", () => AudioManager.Instance?.KillSfx());
             if (r.Contains("physics programmer")) Fire("physics", "物理", () => PlayerController.PhysicsAnomaly = true);
             if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", "描画", ShowNoise);
@@ -75,12 +75,13 @@ namespace L8000
             });
         }
 
-        void Fire(string key, string label, System.Action effect)
+        void Fire(string key, string label, System.Action effect, string verb = "消失")
         {
             if (!_fired.Add(key)) return;
             effect?.Invoke();
             AudioManager.Play(Sfx.Break);
-            ScreenFx.Toast($"― {label} 消失 ―", new Color(0.95f, 0.45f, 0.4f), 2.2f);
+            string msg = string.IsNullOrEmpty(verb) ? $"― {label} ―" : $"― {label} {verb} ―";
+            ScreenFx.Toast(msg, new Color(0.95f, 0.45f, 0.4f), 2.2f);
             ScreenFx.Flash(new Color(0.6f, 0.05f, 0.05f, 0.32f), 0.5f);
             Debug.Log($"[Sabotage] {key}");
         }

@@ -42,12 +42,24 @@ namespace L8000
             if (_bgmFwd != null && _bgmFwd.loadState != AudioDataLoadState.Loaded) _bgmFwd.LoadAudioData();
             if (_bgmRev != null && _bgmRev.loadState != AudioDataLoadState.Loaded) _bgmRev.LoadAudioData();
 
-            _bgm = gameObject.AddComponent<AudioSource>();
+            // BGM は子オブジェクトに(壊れたときフィルタを BGM だけに掛けるため)
+            var bgmGo = new GameObject("Bgm");
+            bgmGo.transform.SetParent(transform, false);
+            _bgm = bgmGo.AddComponent<AudioSource>();
             _bgm.loop = true;
             _bgm.playOnAwake = false;
             _bgm.spatialBlend = 0f;         // 2D。カメラが離れても音量が変わらない
             _bgm.volume = bgmVolume;
             _bgm.clip = _bgmFwd;
+
+            // 「音が歪む」用のフィルタを先に付けておく(実行時 AddComponent は
+            // 物理コールバック中に呼ばれると失敗するため)。既定は無効。
+            _dist = bgmGo.AddComponent<AudioDistortionFilter>(); _dist.distortionLevel = 0f; _dist.enabled = false;
+            _lp = bgmGo.AddComponent<AudioLowPassFilter>();   _lp.cutoffFrequency = 22000f; _lp.enabled = false;
+            _hp = bgmGo.AddComponent<AudioHighPassFilter>();  _hp.cutoffFrequency = 10f;    _hp.enabled = false;
+            _hiss = bgmGo.AddComponent<AudioSource>();
+            _hiss.clip = WhiteNoise(2f);
+            _hiss.loop = true; _hiss.playOnAwake = false; _hiss.spatialBlend = 0f; _hiss.volume = 0f;
 
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;
@@ -161,6 +173,50 @@ namespace L8000
                 yield return null;
             }
             if (_bgm != null) { _bgm.Stop(); _bgm.volume = v0; }
+        }
+
+        bool _bgmBroken;
+        AudioDistortionFilter _dist;
+        AudioLowPassFilter _lp;
+        AudioHighPassFilter _hp;
+        AudioSource _hiss;
+
+        /// <summary>Music/Composer 破壊: BGM を止めず、音を歪ませて砂の混じった音に。</summary>
+        public void DistortBgm()
+        {
+            if (_bgm == null || _bgmBroken) return;
+            _bgmBroken = true;
+
+            if (_dist != null) { _dist.enabled = true; _dist.distortionLevel = 0.55f; }
+            if (_lp != null)   { _lp.enabled = true;   _lp.cutoffFrequency = 2600f; }
+            if (_hp != null)   { _hp.enabled = true;   _hp.cutoffFrequency = 180f; }
+            if (_hiss != null) { _hiss.volume = bgmVolume * 0.35f; _hiss.Play(); }
+
+            StartCoroutine(DipVolume());
+        }
+
+        System.Collections.IEnumerator DipVolume()
+        {
+            // 一瞬 音が痩せてから戻る(壊れた瞬間の違和感)
+            float v0 = _bgm.volume, e = 0f;
+            while (e < 0.4f && _bgm != null) { e += Time.deltaTime; _bgm.volume = Mathf.Lerp(v0, v0 * 0.4f, e / 0.4f); yield return null; }
+            e = 0f;
+            while (e < 0.8f && _bgm != null) { e += Time.deltaTime; _bgm.volume = Mathf.Lerp(v0 * 0.4f, v0 * 0.8f, e / 0.8f); yield return null; }
+            if (_bgm != null) _bgm.volume = v0 * 0.8f;
+        }
+
+        static AudioClip WhiteNoise(float dur)
+        {
+            int n = Mathf.CeilToInt(SR * dur);
+            var data = new float[n];
+            var rng = new System.Random(20260909);
+            for (int i = 0; i < n; i++) data[i] = (float)(rng.NextDouble() * 2.0 - 1.0) * 0.5f;
+            // ループ継ぎ目を目立たなく
+            int fade = SR / 40;
+            for (int i = 0; i < fade; i++) { float k = i / (float)fade; data[i] *= k; data[n - 1 - i] *= k; }
+            var clip = AudioClip.Create("hiss", n, 1, SR, false);
+            clip.SetData(data, 0);
+            return clip;
         }
 
         public void KillSfx()

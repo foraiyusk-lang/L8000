@@ -403,7 +403,8 @@ namespace L8000.EditorTools
                 "なまえ はじめる とじる 設定 効果音 音量 BGM Enter エンドロールのいちばん下から。 " +
                 "英字かなカナ漢字記号数字 消失 画面の水平 だれも消さずに下まで戻った いくつかの名前はもう戻らない " +
                 "多くの名前が無くなった ほとんど何も残らなかったそれでも戻ってきた 指が止まったここまでだった " +
-                "動けなくなって名前ごと沈んだ ██ 　0123456789()/.,:;'\"!?&+-";
+                "動けなくなって名前ごと沈んだ ██ 　0123456789()/.,:;'\"!?&+- " +
+                "音が歪む 効果音 物理 描画 翻訳 照明 言葉 進行管理 もどした なまえをいれてください";
             foreach (char c in extra) if (!char.IsControl(c)) chars.Add(c);
             fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;   // 追加のため一時的に
             var arr = new char[chars.Count]; chars.CopyTo(arr);
@@ -759,8 +760,16 @@ namespace L8000.EditorTools
             stateGo.AddComponent<AudioManager>();
 
             // --- 破壊の副作用 --------------------------------------
+            // 砂嵐は専用 Canvas に載せる(毎フレーム uvRect を変えるので、HUD Canvas に
+            // 同居すると HUD 全体(TMP 含む)が毎フレーム再バッチされて重くなる)。
+            var noiseCanvasGo = new GameObject("NoiseCanvas", typeof(RectTransform));
+            var noiseCanvas = noiseCanvasGo.AddComponent<Canvas>();
+            noiseCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            noiseCanvas.sortingOrder = 90;   // HUD より上・Flash より下くらい
+            noiseCanvasGo.AddComponent<UnityEngine.UI.CanvasScaler>().uiScaleMode =
+                UnityEngine.UI.CanvasScaler.ScaleMode.ConstantPixelSize;
             var noiseGo = new GameObject("GraphicsNoise", typeof(RectTransform));
-            noiseGo.transform.SetParent(canvasGo.transform, false);
+            noiseGo.transform.SetParent(noiseCanvasGo.transform, false);
             var noise = noiseGo.AddComponent<UnityEngine.UI.RawImage>();
             var nrt = noise.rectTransform;
             nrt.anchorMin = Vector2.zero; nrt.anchorMax = Vector2.one;
