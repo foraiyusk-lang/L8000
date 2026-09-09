@@ -331,6 +331,10 @@
 - 検証: 設定→開く/とじる→閉じる/PLAY→なまえ入力/スライダー→音量反映 を Play で確認。
 - Windows64 ビルド 0 err/warn / run.log 例外なし。
 
+### 済(追記) — Windows64 ビルド確認
+- ビルド 0 err/warn。run.log 例外なし。AudioManager リファクタ後の「Only custom filters」
+  警告も hiss を別子GOに分離して解消(commit 3c0ad51)。
+
 ### 次にやること
 1. 人力/シーンビューで通しプレイ(自動ボットは新レベル未踏破)。
 2. ゲート天井の見た目調整(均等配置だが端で僅かに重なる=「名前の壁」として許容か要判断)。
@@ -449,6 +453,10 @@
 - font: 歪みトーストの漢字を追加ベイク(303グリフ)。
 - 検証: name タイル撃つ→Music 歪み発火 / BGM 継続 + フィルタ有効 + hiss 再生 /
   NoiseCanvas 分離 / 全歪みトーストの漢字が font に存在、を確認。
+
+### 済(追記) — Windows64 ビルド確認
+- ビルド 0 err/warn。run.log 例外なし。AudioManager リファクタ後の「Only custom filters」
+  警告も hiss を別子GOに分離して解消(commit 3c0ad51)。
 
 ### 次にやること
 1. 実ビルドで「描画の砂嵐時の遅延」が改善したか、ユーザー体感で確認。
