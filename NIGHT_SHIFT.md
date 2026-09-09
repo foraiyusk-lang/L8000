@@ -498,7 +498,22 @@
   - Main: tiles=402 / GateSeal=7 / missingScript=0 / SabotageDirector・AudioManager・WallL/R・NoiseCanvas・Hiss すべて存在。console error/warning=0。
 - ⚠️ FB8 ロゴの数字はやはり抽象的(8000/7999 の上下を切るため「8UUU / コ¬¬¬」に見える)。ユーザー反応待ちのまま。
 
+### 済(2026-09-09 14:25頃) — FB10: ロゴ比率変更 + スタンドアロン配布ビルド
+- **FB10a「8000を3/5・7999を2/5に」**: `make_logo.py` の `CUT` を 0.30→0.40。
+  8000 は下 3/5 だけ描いて 2/5 上げ、空いた下 2/5 に 7999 の上 2/5(2px あけ)。
+  logo.png 再生成(285x204)。Title.unity のロゴ scale を新幅に合わせ 0.4154 に。
+  A3/A4 提出物も新ロゴで再生成。
+- **FB10b「Unity 無しで開けるゲームの形に」**:
+  - ProjectSettings: productName「残り8000回」/ companyName「Null Interactive」。
+  - Release ビルド(development=false / LZ4)→ `Builds/dist/残り8000回/残り8000回.exe`。
+    95.23MB / 0 error 0 warning。単体起動 player.log クリーン(例外・shader fallback なし)。
+  - `はじめにお読みください.txt`(操作・内容・動作環境)を同梱。
+  - `Builds/dist/残り8000回_win64.zip`(43.5MB)にまとめてユーザーへ送付。
+  - ※ Builds/ は .gitignore 対象。zip/exe は git に入れない。
+- ⚠️ ロゴの数字はカットが深くなり さらに抽象的(「8UUU / コ¬¬¬」寄り)。ユーザー確認待ち。
+
 ### 次にやること
-1. 提出物(A3/A4 = `print/poster_a3.png` `print/howto_a4.png`)のユーザーFB → 構図・文言の調整。
-2. タイトルロゴ(FB8 = `Assets/Art/logo.png`)のユーザーFB → 数字カットを浅く / 末尾1桁だけロール / 数字を大きく など微調整 or 別案。
-3. 1・2 が来ない場合: BGM/SE の逆再生・歪みの実機聴取(ユーザーのみ可能)を依頼。
+1. 新ロゴ(3/5・2/5)のユーザーFB → OK なら確定 / NG なら数字を大きく等の別案。
+2. 配布 zip の起動確認フィードバック(ユーザー実機)。
+3. 提出物(A3/A4)の構図・文言 FB。
+4. BGM/SE の逆再生・歪みの実機聴取(ユーザーのみ可能)を依頼。
