@@ -306,10 +306,12 @@ namespace L8000.EditorTools
                     s1.c.transform.position = new Vector3(s0.w * 0.5f + s1.w * 0.5f, standY, 0f);
                 }
             }
-            // 3) 天井: 画面幅(±CeilEdge)をタイルで隙間なく埋める。
-            //    必要な枚数だけ選び、[-CeilEdge, CeilEdge] に均等配置(僅かな重なりは全継ぎ目へ分散)。
-            //    saboTile は中央付近に置く。余りは上の足場へ回す。
+            // 3) 天井: 画面幅(±CeilEdge)を塞ぐ。見た目は文字どうしに小さな隙間を空けて
+            //    「名前の壁」として読めるようにし、当たり判定だけ colliderPadX で左右へ広げて連結する。
+            //    saboTile は中央付近。余りは上の足場へ。
             const float CeilEdge = HalfW + 0.9f;
+            const float CeilPad  = 0.45f;   // 天井タイルのコライダを片側へ広げる量
+            const float CeilGap  = 0.5f;    // 文字どうしの見た目の隙間(< プレイヤー幅 0.22*2 + pad で塞がる)
             float ceilY = standY + 2.1f;   // 台からジャンプ→頭が天井を越える高さ
             float need = CeilEdge * 2f;
 
@@ -317,9 +319,10 @@ namespace L8000.EditorTools
             float have = gate.saboTile.w;
             foreach (var t in ceilTiles.OrderByDescending(t => t.w))
             {
-                if (have >= need + 0.5f) break;
-                pick.Add(t); have += t.w;
+                if (have >= need) break;
+                pick.Add(t); have += t.w + CeilGap;
             }
+            foreach (var t in pick) t.c.colliderPadX = CeilPad;   // コライダだけ広げて連結
             var leftover = ceilTiles.Where(t => !pick.Contains(t)).ToList();
 
             // saboTile を必ず中央に(プレイヤーは中央の台から真上へ撃つ)
