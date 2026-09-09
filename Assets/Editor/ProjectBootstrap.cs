@@ -985,7 +985,8 @@ namespace L8000.EditorTools
             var goTxt = goTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             goTxt.font = font; goTxt.fontSize = 24f; goTxt.color = new Color(0.8f, 0.88f, 1f);
             goTxt.alignment = TMPro.TextAlignmentOptions.Center; goTxt.text = "はじめる";
-            goBtn.onClick.AddListener(ts.Confirm);
+            // ※ AddListener の登録はシーン保存で消える。必ず永続リスナで。
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(goBtn.onClick, ts.Confirm);
 
             // === タイトルステップ: PLAY ===
             var playGo = MakeUI(canvasGo.transform, "Play", new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(300, 62));
@@ -1000,7 +1001,7 @@ namespace L8000.EditorTools
             playLabel.alignment = TMPro.TextAlignmentOptions.Center;
             playLabel.text = "PLAY";
             ts.playLabel = playLabel;
-            playBtn.onClick.AddListener(ts.OpenNameStep);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(playBtn.onClick, ts.OpenNameStep);
 
             // 設定ボタン
             var setGo = MakeUI(canvasGo.transform, "SettingsBtn", new Vector2(1f, 1f), new Vector2(-90, -34), new Vector2(140, 44));
@@ -1013,13 +1014,16 @@ namespace L8000.EditorTools
             var setTxt = setTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             setTxt.font = font; setTxt.fontSize = 22f; setTxt.color = new Color(0.7f, 0.75f, 0.85f);
             setTxt.alignment = TMPro.TextAlignmentOptions.Center; setTxt.text = "設定";
-            setBtn.onClick.AddListener(ts.ToggleSettings);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(setBtn.onClick, ts.ToggleSettings);
 
-            // 設定パネル
-            var panelGo = MakeUI(canvasGo.transform, "SettingsPanel", new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(460, 220));
+            // 設定パネル(ロゴに被らないよう中央やや下・不透明。奥に画面全体の暗幕)
+            var panelRoot = MakeUI(canvasGo.transform, "SettingsPanel", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000, 4000));
+            var scrim = panelRoot.gameObject.AddComponent<UnityEngine.UI.Image>();
+            scrim.color = new Color(0f, 0f, 0f, 0.62f);
+            ts.settingsPanel = panelRoot.gameObject;
+            var panelGo = MakeUI(panelRoot, "Box", new Vector2(0.5f, 0.5f), new Vector2(0, -8), new Vector2(470, 210));
             var panelImg = panelGo.gameObject.AddComponent<UnityEngine.UI.Image>();
-            panelImg.color = new Color(0.03f, 0.03f, 0.05f, 0.96f);
-            ts.settingsPanel = panelGo.gameObject;
+            panelImg.color = new Color(0.04f, 0.045f, 0.06f, 1f);
             ts.bgmSlider = MakeSlider(panelGo, font, "BGM 音量", new Vector2(0, 55));
             ts.sfxSlider = MakeSlider(panelGo, font, "効果音 音量", new Vector2(0, -15));
             var closeGo = MakeUI(panelGo, "Close", new Vector2(0.5f, 0f), new Vector2(0, 26), new Vector2(160, 40));
@@ -1031,7 +1035,7 @@ namespace L8000.EditorTools
             var closeTxt = closeTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             closeTxt.font = font; closeTxt.fontSize = 20f; closeTxt.color = Color.white;
             closeTxt.alignment = TMPro.TextAlignmentOptions.Center; closeTxt.text = "とじる";
-            closeBtn.onClick.AddListener(ts.ToggleSettings);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(closeBtn.onClick, ts.ToggleSettings);
 
             // ヒント(なまえステップの下)
             var hintGo = MakeUI(nameStepGo, "Hint", new Vector2(0.5f, 0.5f), new Vector2(0, -120), new Vector2(600, 40));
