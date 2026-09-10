@@ -1087,6 +1087,21 @@ commit 1183b9f:
 - 軽微な nit(非対応): `OnTileRestored` が `RoleOf` を2回呼ぶ(コスト無視できる)。
 - → 今セッションの実装は健全。コミット不要の nit のみ。
 
+### 済(2026-09-11 08:20頃) — ビルド設定 / Player Settings の点検(提出前チェック)
+- **Scenes in Build**: 2 個(`[0] Title` / `[1] Main`)、両方 enabled・実在。順序OK。
+- productName「残り8000回」/ companyName「Null Interactive」(credits・readme と一致)。
+- fullScreenMode = FullScreenWindow(ボーダーレス全画面)/ defaultIsNativeResolution = True
+  / runInBackground = True(コードと一致)→ ブース向けとして妥当。
+- colorSpace = Gamma(2Dテキストなので正しい選択)/ vSync = 1(ティアリング防止)。
+- **⚠️ アプリアイコン未設定**(Standalone icons = 0)。exe の Explorer/タスクバー表示が
+  デフォルトの Unity アイコンになる。提出物としては軽微な未完成サイン。
+  → **ただしロゴ確定(判断待ち #3)が先**。ロゴが変わればアイコンも合わせるべきなので、
+     今は作らない。ロゴ決定後にセットで対応。
+- Unity スプラッシュ(Made with Unity)は表示のまま = 個人ライセンスの標準・
+  credits でも「Made with Unity」明記なので整合。
+- bundleVersion = 1.0(変更不要)。
+- コード変更なし。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
@@ -1098,3 +1113,5 @@ commit 1183b9f:
 7. **credits.txt の `S. Novak` 重複**(Engine Programmer / Compliance QA)。意図的なら放置、
    誤りなら片方を別名に。他は全員ユニーク。
    (※ Producer×捕獲の消費倍率は 3c4e697 で修正済み・判断不要)
+8. **アプリアイコン**: ロゴ(#3)を確定したら、それに合わせた .exe アイコンを作成・設定する。
+   (現状デフォルト Unity アイコン。ロゴ未確定のため保留。)
