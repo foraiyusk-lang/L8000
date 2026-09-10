@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace L8000
 {
@@ -102,10 +103,25 @@ namespace L8000
         }
         bool _ruleOpen;
 
+        float _escArm;
+
         void Update()
         {
             _t += Time.deltaTime;
             if (streamer == null || player == null) return;
+
+            // Esc 2回で タイトルへ(TGS ブースの手動リセット用。1回は誤爆防止でプロンプトのみ)。
+            // 終幕中は無効(そのままループする)。
+            if (_phase != Phase.Done)
+            {
+                _escArm = Mathf.Max(0f, _escArm - Time.deltaTime);
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    if (_escArm > 0f) { SceneManager.LoadScene("Title"); return; }
+                    _escArm = 1.6f;
+                    ScreenFx.Toast("もう一度 Esc で タイトルへ", new Color(0.8f, 0.85f, 0.95f), 1.3f);
+                }
+            }
 
             switch (_phase)
             {
