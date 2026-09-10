@@ -1073,6 +1073,20 @@ commit 1183b9f:
   残るのは下記「判断待ち」7項目のみで、**いずれもユーザーの試遊・実聴・美的判断が必要**。
   以降の night-shift は新しい入力(FB or 新タスク)が無ければ小さな再検証に留まる。
 
+### 済(2026-09-11 08:00頃) — 今セッションのコード変更を通しでレビュー(冷静な再読)
+- 6コミット(a434234 FB11 / 1183b9f FB12 / 003cc93 / 045ecc0 / be85889 / 3c4e697 / d829702)の
+  full diff をレビュー担当の目で再読。**バグなし**。
+  - `Destroy_` / `Restore` の `TotalCharsDestroyed` 増減は `!isRule` で対称ガード。
+  - `Restore(silent)` の呼び出しは2箇所のみ、BackSpace は音あり(silent 既定 false)。
+  - `SabotageDirector.Unfire` は `_fired.Remove(key)` で「発動済みのみ反転」、
+    同一ロールの複数タイル通過でもちょうど1回。`Fire` と対称。
+  - `GameState.Deduct` 抽出は `Spend`(倍率)/`SpendRaw`(生)を共通経路に。`_fracDebt` は Spend のみ。
+  - `GameFlow` の Esc ハンドラは `_phase != Done` ガード、`_escArm` ダブルタップ。標準的。
+  - `FindSafeSpot` 登りは first-hit 返却で従来と一致、降りのみ OverlapBox 追加。
+  - CreditTileBuilder(FB12)は Editor 専用、実コライダ幅で Gap 0.4 配置。
+- 軽微な nit(非対応): `OnTileRestored` が `RoleOf` を2回呼ぶ(コスト無視できる)。
+- → 今セッションの実装は健全。コミット不要の nit のみ。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
