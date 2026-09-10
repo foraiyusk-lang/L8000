@@ -952,15 +952,22 @@ commit 1183b9f:
 - **配布ビルド再作成**: script-only Succeeded 95MB errors=0、dll 21:55、
   exe 起動 run.log クリーン、zip 差し替え 43.5MB。
 
-### 済(2026-09-10 22:25頃) — HEAD(adb21e0)の目視スモークテスト(部分)
+### 済(2026-09-10 22:40頃) — HEAD(adb21e0)の通しスモークテスト(完走)
 - 今セッションのコード修正4件(無の復帰位置 / 降りの効果音 / 終幕分岐 / 捕獲代償倍率)
-  が入った状態で通しを目視確認:
-  - タイトル: ロゴ(8UUU/7000)・PLAY・設定・タグライン 正常描画。
-  - Main 開始: `startingActions=2000` 確認。
-  - 文字化け(Localization 破壊): クレジットが漢字/カナに1:1置換、HUD「残り」判読可 = 正常。
-  - 途中で `execute_code` がツール制限で停止したため、降り→終幕の通しは今回未完
-    (各修正は実装時に個別検証済み)。次回このスモークの続きから。
-- console error 0・コード変更なし。
+  が入った状態で全ループを目視確認、**完走**:
+  1. タイトル(ロゴ 8UUU/7000・PLAY・設定・タグライン)正常。
+  2. Main: `startingActions=2000`。12タイル破壊(TotalCharsDestroyed=75)。
+  3. プレイヤーを頂上へ → **巻き戻し演出が自然発火**(「巻き戻しが止まる」トースト)。
+  4. **降り**(「▼ もどっている」/ FallFromAbove の無)。
+  5. **降りの復元**: 破壊12タイルを通過 → TotalCharsDestroyed **75→0**。
+  6. 最下部到達 → 「↓ Enter」プロンプト。
+  7. `======` 破壊 → **TotalCharsDestroyed 0 のまま**(be85889 の修正が効いている)。
+  8. プレイヤー最下部突破 → **終幕が発火・完走 → タイトルへループ**。
+  9. タイトル復帰時 static 全リセット(Garble/FrameBroken/PhysAnom/WritingBroken/
+     TotalCharsDestroyed/DescentDropDestroyed すべて初期値)。
+- console error/warning 0。コード変更なし。
+- (※ 途中 reflection で private を叩く execute_code が1回ツール制限で拒否されたが、
+  Transform 位置操作など public API 経由で通せた。)
 
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
