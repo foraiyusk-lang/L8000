@@ -905,6 +905,26 @@ commit 1183b9f:
 - → ユーザー判断待ち #5 の「機構的な正しさ」は確認済み。残るは音色/音量バランスの実聴のみ。
 - console error 0・コード変更なし。
 
+### 済(2026-09-10 21:10頃) — credits.txt / 終幕テキストの内容QA + 分岐バグ修正(commit be85889)
+- **バグ発見・修正**: 終幕の最後の1行は破壊した「名前」の数で分岐(0 / <20 / <80 / それ以上)
+  するが、最下部の `=====`(出口・54文字・撃つのは進行に必須)が
+  `TotalCharsDestroyed` に加算され、分岐を1段階重い方へずらしていた。
+  FB11 の「降りで全復元」をした完璧なプレイでも `=====` の 54 が残り
+  「多くの名前が、無くなった」になっていた。
+  → `CreditTile.Destroy_ / Restore` の増減を `!isRule` でガード。
+  検証: 15名破壊(93)→全復元(0)→ `=====` 破壊(0のまま)→「だれも消さずに、下まで戻った。」
+  全分岐(good 0/5/20/80、bad 0/5、WritingBroken)正常。
+- **credits.txt 内容QA**(4572B・全行読み):
+  - 世界観のイースターエッグは意図的で良好: 各国ローカライズ会社名が
+    回文/エコー/巻き戻し/帰還のモチーフ(Studio Palindrome, Casa Eco,
+    巻き戻しスタジオ, 回声ローカライズ, Bottega Ritorno, Fim Estudio…)、
+    謎ノ井 / ??? / A Voice from Below / The Last Line :: 名も無き声、など。
+  - Font :: x12y16pxMaruMonica (hicc) の実クレジット有り(HallMark 原則に合致)。
+  - **観察(変更せず)**: `S. Novak` が2箇所(Engine Programmer / Compliance QA)。
+    他は全員ユニークなので重複の可能性。ジョークの意図もあり得るので**ユーザー確認**。
+- **配布ビルド再作成**: script-only Succeeded 95MB errors=0 warnings=0、dll 20:57、
+  exe 起動 run.log クリーン、zip 差し替え 43.5MB。console error 0。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
