@@ -819,6 +819,24 @@ commit 1183b9f:
   shader 等の非決定的なビルドパイプライン通知。CS 警告ではない・前ビルドでも交互に出る)。
   Assembly-CSharp.dll 更新(17:57)、exe 起動 run.log クリーン、zip 差し替え 43.5MB。
 
+### 済(2026-09-10 18:25頃) — 降りの復元まわりを目視QA + サボタージュ役割の網羅確認
+- 直近2件の修正(復帰位置・効果音の重なり)の周辺を通しで目視。
+- **文字化け → 降りで復元** をスクショで確認:
+  - 登り中(garble ON): クレジットが漢字/カナに1:1置換され「言語が壊れた足場」に。
+    HUD「残り」は別系統で判読可。
+  - 降りで通過 → garble クリア、クレジットが元の白字テキストに復帰
+    (QA Tester の階段状セクションがくっきり)。
+- **実際に発動したサボタージュ4種が降りで反転**: garble / 画面の傾き(FrameBroken)/
+  物理乱れ(PhysicsAnomaly)/ 終幕黒塗り(WritingBroken)すべて False に戻ることを確認。
+- **サボタージュ10役割 × レベル内タイルの網羅チェック**(新規):
+  music / sound director / physics programmer / graphics programmer・rendering /
+  localization / ui・ux / lighting(= "Lighting Artist"が contains 一致)/
+  cinematics / writer・script editor / Producer(完全一致)——
+  **全10役割に対応するクレジットタイルが実在**(死んでいるサボは無し)。
+- 注意(検証手技): 降り中にカメラを y 手動移動すると「無」の黒 Fill(sortOrder 15)の
+  内側に入り真っ暗になる。バグではない。テレポート検証時は voidRiser.Stop() してから撮る。
+- console error 0。コード変更なし。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
