@@ -581,22 +581,23 @@
      を「かな ・ カナ ・ 英数字」に(MCP で TMP.text 差し替え or シーン再ビルド)。
   3. 配布ビルドを名前フィルタ込みで再作成。
 
-### 済/中断(2026-09-10 09:00頃) — プレースホルダ修正 + Unity 起動できず
-- ✅ `Title.unity` の serialized プレースホルダを「かな ・ カナ ・ 英数字」に(disk 直編集、
-  Unity 停止中なので安全)。commit adac6ba。
-- ⚠️ **Unity エディタが起動途中で停止**。バックグラウンド起動 → Unity.exe は生きているが
-  RAM 72MB のまま・Editor.log がライセンス処理(3KB)で止まる = **起動時のモーダル
-  ダイアログでブロック中**(前回 OOM クラッシュ後の「バグ報告しますか?」等と思われる)。
-  GUI ダイアログは自動で消せない。
-  - **要対応(ユーザー)**: 画面の Unity ダイアログを閉じる/「Don't report」等で進める。
-    その後 Unity が普通に開けば MCP も復帰する。
-  - 起動しない場合は `Library/` 削除で再インポート、または Hub から開き直し。
-- **まだ未検証(Unity 復帰後)**: 名前入力フィルタの動作 / 名前フィルタ込みの配布ビルド再作成。
+### 済(2026-09-10 09:25頃) — プレースホルダ修正 + batchmode で配布ビルド復旧
+- ✅ `Title.unity` プレースホルダを「かな ・ カナ ・ 英数字」に(commit adac6ba)。
+- **GUI エディタが起動時ダイアログでハングし続けた** → zombie Unity.exe を kill、`Temp/` を削除。
+- **batchmode でビルド**: `ProjectBootstrap.BuildDist`(新 `[MenuItem("L8000/Build Windows (dist)")]`)を追加し、
+  `Unity.exe -batchmode -quit -executeMethod L8000.EditorTools.ProjectBootstrap.BuildDist` で実行。
+  → **Succeeded / 95MB / 0 error 0 warning**。単体起動 run.log クリーン(例外・glyph 警告なし)。
+  `Builds/dist/残り8000回/` + zip を更新(2000カウント + フォント修正 + 名前フィルタ + プレースホルダ 全部入り)。
+- ⚠️ **名前入力フィルタの実プレイ検証はまだ**(batchmode では play mode 検証不可)。
+  コードは単純(onValidateInput で範囲チェック)なので回帰リスクは低いが、GUI エディタ復帰後に
+  「漢字が打てない / かな・英数は打てる」を目視確認したい。
+- ℹ️ GUI エディタは相変わらず起動時ダイアログでハングする可能性あり。ユーザーが一度手動で
+  開いてダイアログを閉じれば以後は正常化する見込み。
 
 ### 次にやること
-1. 【最優先・要ユーザー】Unity 起動ダイアログを閉じる → 名前フィルタ検証 → 配布ビルド再作成。
+1. GUI エディタ復帰後: 名前入力フィルタの実プレイ目視確認。
 2. A3 ポスターの再FB(右パネルの黒み・本文量・構図)。
 3. 新ロゴ(3/5・2/5)のユーザーFB。
 4. 配布 zip の起動確認(ユーザー実機)。
 5. BGM/SE の逆再生・歪みの実機聴取(ユーザーのみ可能)を依頼。
-6. (任意)4.25GB の `AppData/Local/Unity/Editor/Editor.log` を削除。
+6. (任意)肥大した `AppData/Local/Unity/Editor/Editor.log` を削除。

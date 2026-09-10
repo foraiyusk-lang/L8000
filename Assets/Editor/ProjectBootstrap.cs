@@ -37,6 +37,29 @@ namespace L8000.EditorTools
             Debug.Log($"[L8000] font rebaked: {(f != null ? f.characterTable.Count : 0)} glyphs");
         }
 
+        /// <summary>配布用 Windows64 プレイヤーを Builds/dist/ に出力する。
+        ///   Unity.exe -batchmode -quit -projectPath &lt;repo&gt; -executeMethod L8000.EditorTools.ProjectBootstrap.BuildDist -logFile -
+        /// </summary>
+        [MenuItem("L8000/Build Windows (dist)")]
+        public static void BuildDist()
+        {
+            var scenes = new[] { TitleScenePath, ScenePath };
+            const string outExe = "Builds/dist/残り8000回/残り8000回.exe";
+            Directory.CreateDirectory(Path.GetDirectoryName(outExe));
+            var opts = new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = outExe,
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.CompressWithLz4,
+            };
+            var report = BuildPipeline.BuildPlayer(opts);
+            var s = report.summary;
+            Debug.Log($"[L8000] dist build: {s.result} {s.totalSize / (1024 * 1024)}MB errors={s.totalErrors} warnings={s.totalWarnings}");
+            if (s.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
+                throw new Exception("dist build failed: " + s.result);
+        }
+
         // -----------------------------------------------------------------
         // ヘッドレスで Play して数秒後にカメラをPNG保存する検証用。
         //   Unity.exe -batchmode -projectPath <repo> -executeMethod L8000.EditorTools.ProjectBootstrap.PlayCapture
