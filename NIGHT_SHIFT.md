@@ -751,6 +751,22 @@ commit 1183b9f:
 - FB10 / 2000回 / フォント / 名前フィルタ / ポスター2案 / FB11 / FB12 は実装・検証・
   配布ビルド更新すべて完了。以降はユーザーのFB待ち。
 
+### 済(2026-09-10 16:25頃) — 配布ビルドの内容一致 + HEAD の通し状態確認
+- **配布ビルドは最新**: `Assembly-CSharp.dll`(14:27)に FB11 のシンボルが全部入り
+  (`RestorePassedDuringDescent` / `RestoreBgm` / `ReviveSfx` / `OnTileRestored` /
+  `FireTileRestored` / `GarblePool`)。`data.unity3d`(14:45)は FB12 のシーン。
+  4971b3b・6913bf5 は NIGHT_SHIFT.md のみの変更なので**再ビルド不要**。
+- 同梱 `はじめにお読みください.txt`: 操作・消費ルール・「TGS 出店版は残り 2000 回」注記・
+  SmartScreen 対処 すべて記載、現行どおり。
+- **エディタ Play で HEAD の状態を確認**(タイトルから起動 = commit 5397034):
+  - タイトル: ロゴ(8UUU/7000 比率)・赤ドット・「エンドロールの いちばん 下から。」・
+    PLAY・設定、正常描画。
+  - Main: `Remaining/startingActions = 2000` / タイル 402(コライダ 366)/ span Y 0.0–219.8
+    (FB12 と不変)/ GateSeal 7個(各 端2箱)/ climbVoidSpeed 1.4 / descentVoidSpeed 2.6。
+  - ゲート y66.45 を目視: solid 語列 +装飾2段。中央帯やや密だが白字で判読可、コンセプト内。
+  - console error 0。棒立ちで無に -100(1900)= 仕様どおり。
+- コード変更なし。全FB項目は実装・検証・配布ビルドとも完了、以降ユーザーFB待ち。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
