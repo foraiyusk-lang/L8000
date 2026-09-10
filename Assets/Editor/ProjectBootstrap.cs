@@ -58,7 +58,45 @@ namespace L8000.EditorTools
             Debug.Log($"[L8000] dist build: {s.result} {s.totalSize / (1024 * 1024)}MB errors={s.totalErrors} warnings={s.totalWarnings}");
             if (s.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
                 throw new Exception("dist build failed: " + s.result);
+
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(outExe), "はじめにお読みください.txt"), DistReadme);
+            Debug.Log("[L8000] dist readme written");
         }
+
+        const string DistReadme =
+@"残り8000回  ―  Null Interactive
+
+「残り8000回.exe」をダブルクリックで起動します。
+Unity のインストールは不要。Windows 64bit 専用です。
+
+■ 操作
+  A / D      左右に歩く
+  W          ジャンプ(空中でもう一度)
+  Enter      まっすぐ上へビーム(足場の文字を壊す/近道)
+  BackSpace  直前に壊した文字を戻す(自分より上のものだけ)
+  Esc        タイトルへ/設定を閉じる
+
+  歩く・跳ぶ・撃つ ―― どれも「残り回数」を 1 消費します。
+  長押しや BackSpace では減りません。
+
+■ 内容
+  スタッフロールを、いちばん下から登るゲームです。
+  下からせり上がる「無」に飲まれる前に、頂上のタイトルへ。
+  頂上に触れたら来た道を降りて、最初の線を撃ち抜いて外へ出ます。
+
+  名前を撃つと足場になりますが、その担当の仕事(音・光・重力・文字…)が歪みます。
+  「無」に捕まると残り回数を 100 失い、中央へ戻されます。
+  残り回数が 0 になると、指が止まります。
+
+  ※ この TGS 出店版は時間の都合で「残り 2000 回」に設定しています。
+
+■ 動作環境
+  Windows 10 / 11 64bit、GTX 1650 相当以上を推奨。
+  署名なしの個人ビルドのため SmartScreen 等が警告することがあります
+  (「詳細情報」→「実行」で起動できます)。
+
+(c) 2026 Null Interactive
+";
 
         // -----------------------------------------------------------------
         // ヘッドレスで Play して数秒後にカメラをPNG保存する検証用。
