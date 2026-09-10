@@ -999,6 +999,18 @@ commit 1183b9f:
     (ロゴのオドメーターに少し被るが modal なので許容。)
 - console error/warning 0。コード変更なし。
 
+### 済(2026-09-11 00:15頃) — Esc→タイトル の static リーク懸念をクローズ
+- d829702 で「Esc 2回でタイトルへ」は `Finale.CleanStatics` を通らないため、
+  遷移直後に static が汚れたままになる点を実測で確認:
+  - **Title 側**: `CameraFollow` インスタンス 0・TileField/PlayerController/Finale 無し
+    → `FrameBroken=true` でも Title カメラは無回転、汚れた static を読むものが無い = 無害。
+  - **再開側**: 3種 static を汚して Main ロード → `GameState.Awake` が
+    Garble/PhysAnom/WritingBroken/FrameBroken/DescentDropDestroyed/TotalCharsDestroyed
+    を**全て false/0 にリセット**。TileField.Awake も DescentDropDestroyed を二重に落とす。
+  - AudioManager はシーン単位で `_bgmBroken` は既定 false。
+  - → Esc→タイトルは追加のクリーンアップ不要。懸念クローズ。
+- console error 0・コード変更なし。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
