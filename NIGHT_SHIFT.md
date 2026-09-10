@@ -2,22 +2,13 @@
 
 ユーザー就寝中の自律作業ログ。`.claude/skills/night-shift` の手順で30分ごとに更新。
 
-> ## 🔴 Unity がクラッシュ済み → 再起動が必要(2026-09-11 01:40 確認)
-> **Editor.log が 3.7GB まで肥大 → Unity Editor が 01:38 頃クラッシュ。**
-> (log 末尾に stacktrace + "A crash has been intercepted... Shut down."。
->  今は `Unity.exe` プロセス無し。Unity Hub と Licensing だけ生存。)
-> - クラッシュ報告: `%LOCALAPPDATA%\Temp\Unity\Editor\Crashes\Crash_2026-09-10_163801747`
->   (診断が要る場合はここ。Editor.log 本体は 22M 行がロック競合スパム=中身ほぼ無し)。
-> - `Temp/__Backupscenes/` は今は空(復帰ループの心配は無し)。
->   `Library/EditorInstance.json` は残存(クラッシュのため)→ 再起動時に
->   「別インスタンス実行中?」と出たら無視/削除でOK。
-> - **復旧手順**:
->   1. Unity Hub からプロジェクトを開き直す(Editor.log は自動で prev にローテート)。
->   2. 起動が不安定なら Unity 終了状態で `Library/` を消して再インポート、が確実。
->   3. (任意)肥大した `%LOCALAPPDATA%\Unity\Editor\Editor.log`(3.7GB)は
->      Unity 終了中なら削除して良い(次回起動で作り直される)。
-> - **再起動まで night-shift は MCP 検証(Play/コンパイル/ビルド)不可**。
->   ゲーム本体は 8e4acce で提出可能・配布ビルド最新。コード変更の必要は無い。
+> ## ✅ Unity 復旧済み(2026-09-11 06:36 頃 再起動確認)
+> - 01:38 頃 Editor.log 3.7GB で OOM クラッシュ → その後ユーザーが再起動。
+> - 新しい `Editor.log` は 41KB・**ロック競合スパムの再発なし**(0 件)、増加も 0。
+> - フル再インポート後、`isCompiling/isUpdating=false`・Main シーンで idle。MCP 正常。
+> - `mcpforunity://editor/state` リソースは stale を返すことがあるが、`read_console` /
+>   `execute_code` は live 応答するので実害なし。
+> - → night-shift 通常フロー(検証込み)に復帰。
 
 ## 新フロー(ユーザー指示の解釈 / 未確認は「仮」)
 
@@ -1041,13 +1032,25 @@ commit 1183b9f:
 ### 保留(2026-09-11 01:25頃) — Editor.log 肥大が継続中、MCP 作業を見送り
 - night-shift 再呼び出しを受けたが Unity 未再起動、Editor.log 1.1GB→2.84GB。MCP 検証を見送り。
 
-### 保留(2026-09-11 01:40頃) — Unity クラッシュを確認、MCP 作業不可
-- Editor.log 3.7GB → **Unity Editor が 01:38 頃クラッシュ**(`Unity.exe` プロセス消失、
-  log 末尾に stacktrace)。上部 🔴 を「クラッシュ済み・復旧手順」に更新。
-- **MCP は完全に不通**(エディタ無し)。このイテレーションもコード変更・検証なし。
-- ゲーム本体は 8e4acce で提出可能・配布ビルド(`Builds/dist/残り8000回_win64.zip`)最新。
-- 次回: Unity が起動していれば通常フロー(通しスモークテスト等)に復帰する。
-  起動していなければ再度この状況を報告して停止。
+### 保留(2026-09-11 01:40〜05:xx頃) — Unity クラッシュ、複数回の night-shift 呼び出しで待機
+- Editor.log 3.7GB → Unity Editor が 01:38 頃 OOM クラッシュ。以降 ~9回の night-shift
+  呼び出しに対し「Unity 未起動・作業不可」を報告し続けた(コード変更なし)。
+
+### 済(2026-09-11 06:55頃) — Unity 復旧 → 通しスモークテスト完走(クラッシュ後の健全性確認)
+- ユーザーが Unity を再起動(06:36 頃)。フル再インポート後、コンパイル警告は
+  「Input Manager 非推奨」1件のみ(既知・意図的)、エラー 0。ロック競合スパム再発なし。
+- **HEAD(d829702、今セッションの全修正+Esc 機能込み)で全ループを通し検証、完走**:
+  1. タイトル描画正常(スクショ)。
+  2. Main: `startingActions=2000` / タイル 402 / GateSeal 7。
+  3. 10タイル破壊(count 68)。
+  4. 頂上へ → 巻き戻し演出が自然発火 → 降り(「▼ もどっている」/ FallFromAbove)。
+  5. 降りで通過 → 破壊タイル全復元、count **68→0**。
+  6. 最下部「↓ Enter」→ `======` 破壊 → count **0 のまま**(be85889 修正 OK)。
+  7. 終幕発火・完走 → タイトルへループ。
+  8. static 全リセット(Garble/FrameBroken/PhysAnom/WritingBroken/count/DescentDropDestroyed)。
+  9. play セッション後の Editor.log 47KB・スパム 0 = **lock 不整合は再起動で解消**。
+- console error/warning 0。コード変更なし。
+- → クラッシュ・再インポートによる破損なし。ゲームは提出可能状態を維持。
 
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
