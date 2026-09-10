@@ -44,7 +44,7 @@ namespace L8000
 
         void Start() => OnChanged?.Invoke(Remaining);
 
-        /// <summary>入力 n 回ぶん消費する。0 に達したら OnDepleted。</summary>
+        /// <summary>入力 n 回ぶん消費する(spendMultiplier を掛ける)。0 に達したら OnDepleted。</summary>
         public void Spend(int n = 1)
         {
             if (Depleted || n <= 0) return;
@@ -52,6 +52,21 @@ namespace L8000
             float cost = n * Mathf.Max(0.01f, spendMultiplier) + _fracDebt;
             int whole = Mathf.FloorToInt(cost);
             _fracDebt = cost - whole;
+            Deduct(whole);
+        }
+
+        /// <summary>
+        /// 倍率を掛けずにちょうど n だけ減らす。無に捕まった代償など「入力ではないペナルティ」用。
+        /// (Producer 破壊中でも「捕まると 100」を保つ。README の説明と一致させる。)
+        /// </summary>
+        public void SpendRaw(int n)
+        {
+            if (Depleted || n <= 0) return;
+            Deduct(n);
+        }
+
+        void Deduct(int whole)
+        {
             if (whole <= 0) return;
 
             Remaining = Mathf.Max(0, Remaining - whole);

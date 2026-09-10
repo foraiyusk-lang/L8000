@@ -131,7 +131,7 @@ namespace L8000
         void Catch()
         {
             var gs = GameState.Instance;
-            if (gs != null) gs.Spend(catchCost);
+            if (gs != null) gs.SpendRaw(catchCost);   // 捕獲の代償は倍率を掛けない(常に catchCost ちょうど)
 
             if (gs != null && gs.Depleted)
             {
