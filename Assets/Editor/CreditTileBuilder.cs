@@ -358,18 +358,38 @@ namespace L8000.EditorTools
                 MakeSealBox(seal, (CeilEdge + sR) * 0.5f, ceilY, CeilEdge - sR, h);
             }
 
-            // 4) 天井の上: 着地足場より上へ、余りタイル + 残りの行を中央始点の階段で。
+            // 4) 天井の上: 着地足場より上へ、残りの行を中央始点の階段で。
             float maxY = landing.Count > 0 ? landY : ceilY;
             y = maxY + StepUp;
-            // 余ったタイルは天井の一段下に装飾として散らす(当たり判定なし)
-            float ex = -CeilEdge + 1f;
-            foreach (var t in leftover)
+
+            // 余ったタイル(当たり判定なし)= 天井まわりの空き2段へ。レベル高は増やさない。
+            //   同じ行の単語はまとめて置く(バラすと "語のサラダ" で読めない)。
             {
-                t.c.noCollider = true;
-                t.c.transform.position = new Vector3(ex + t.w * 0.5f, ceilY - 1.1f, 0f);
-                ex += t.w + 0.5f;
-                if (ex > CeilEdge) ex = -CeilEdge + 1f;
+                var groups = new List<List<Tile>>();
+                var byLine = new Dictionary<string, List<Tile>>();
+                foreach (var t in leftover)
+                {
+                    string key = t.c.sourceLine ?? "";
+                    if (!byLine.TryGetValue(key, out var g)) { g = new List<Tile>(); byLine[key] = g; groups.Add(g); }
+                    g.Add(t);
+                }
+                float[] decoY = { ceilY - 1.0f, ceilY + 1.35f };
+                const float decoEdge = HalfW + 1.5f;
+                float dx = -decoEdge; int dr = 0;
+                foreach (var g in groups)
+                {
+                    float gw = g.Sum(t => t.w) + WordGap * Mathf.Max(0, g.Count - 1);
+                    if (dx + gw > decoEdge && dx > -decoEdge + 0.1f) { dx = -decoEdge; dr = (dr + 1) % decoY.Length; }
+                    foreach (var t in g)
+                    {
+                        t.c.noCollider = true;
+                        t.c.transform.position = new Vector3(dx + t.w * 0.5f, decoY[dr], 0f);
+                        dx += t.w + WordGap;
+                    }
+                    dx += 1.1f;   // グループ(行)どうしの間隔
+                }
             }
+
             float ux = 0f; int ud = 1;
             for (int i = gi + 1; i < lines.Count; i++)
             {
