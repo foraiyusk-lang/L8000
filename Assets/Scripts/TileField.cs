@@ -101,7 +101,9 @@ namespace L8000
                 if (t.transform.position.y <= playerY + 0.4f) continue;    // まだ通過していない(自分と同じ〜下)
                 _restoreScratch.Add(t);
             }
-            foreach (var t in _restoreScratch) t.Restore();   // Restore が _destroyed から外す
+            // 一括で戻る時に効果音が重ならないよう個々は無音。区切りの音は
+            // サボタージュ復帰(Unfire)側で役割ごとに1回だけ鳴る。
+            foreach (var t in _restoreScratch) t.Restore(silent: true);   // Restore が _destroyed から外す
         }
 
         /// <summary>

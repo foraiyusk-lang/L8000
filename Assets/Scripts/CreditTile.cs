@@ -243,14 +243,17 @@ namespace L8000
         public void BreakOpen() => Destroy_();
 
         /// <summary>消したタイルを元に戻す。BackSpace(登り)/ 降りで通過したとき。破壊数もその分戻す。</summary>
-        public void Restore()
+        /// <param name="silent">降りの一括復元では 1フレームに複数戻ることがあり、
+        /// 効果音が重なって耳障りになる。その場合は個々の音を鳴らさない
+        /// (サボタージュの復帰音は SabotageDirector.Unfire 側で1回だけ鳴る)。</param>
+        public void Restore(bool silent = false)
         {
             if (!Destroyed) return;
             Destroyed = false;
             TileField.TotalCharsDestroyed = Mathf.Max(0, TileField.TotalCharsDestroyed - Mathf.Max(1, (text ?? "").Length));
             _built = "\0";
             Rebuild(force: true);
-            AudioManager.Play(Sfx.Shoot, 0.4f);
+            if (!silent) AudioManager.Play(Sfx.Shoot, 0.4f);
             TileField.FireTileRestored(this, text ?? "");
         }
 
