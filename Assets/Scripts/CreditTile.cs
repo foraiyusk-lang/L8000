@@ -94,11 +94,13 @@ namespace L8000
 
             bool strike = Destroyed && TileField.DescentDropDestroyed;
             bool gone   = Destroyed && !TileField.DescentDropDestroyed;
-            string bodyText = text ?? "";
+            string plain = text ?? "";   // 当たり判定は「元の単語」の幅に固定(文字化けで足場がずれない)
+            string bodyText = plain;
             if (Application.isPlaying && TileField.Garble && !isRule) bodyText = Mojibake(bodyText);
             string shown = gone ? "" : (strike ? $"<s>{bodyText}</s>" : bodyText);
 
-            tmp.text = shown;
+            // --- まず「元の単語」で測ってコライダを決める(文字化け後の幅では測らない)---
+            tmp.text = plain;
             tmp.fontSize = RefSize;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
@@ -163,6 +165,13 @@ namespace L8000
                 }
             }
 
+            // --- 表示は文字化け/取り消し線/消去後のテキストに差し替える(コライダは触らない)---
+            if (shown != plain)
+            {
+                tmp.text = shown;
+                tmp.ForceMeshUpdate();
+            }
+
             Color col = isRule ? new Color(0.5f, 0.5f, 0.5f)
                       : isHeader ? new Color(0.55f, 0.75f, 1f)
                       : isName ? Color.white
@@ -174,14 +183,38 @@ namespace L8000
             _builtScale = sizeScale;
         }
 
-        // MaruMonica にあるグリフのみ(░▒▓等は非対応)。〓 は日本語文字化けの定番。
-        static readonly string GarbleChars = "█▉▊▌▎■□〓※×＃─│┼";
-        static string Mojibake(string s)
+        // 文字化け候補。カタカナ・ひらがな中心 + フォントにある漢字/記号を少し。
+        //   ・1文字ずつ置換(文字数は変えない = 元と同じ長さ)
+        //   ・重いブロック(█▉ 等)は「見えにくい」ので使わない(FB11)
+        static char[] _garblePool;
+        static char[] GarblePool()
+        {
+            if (_garblePool != null) return _garblePool;
+            var sb = new System.Text.StringBuilder();
+            for (char c = 'ァ'; c <= 'ヶ'; c++) sb.Append(c);           // カタカナ
+            for (char c = 'ぁ'; c <= 'ゖ'; c++) sb.Append(c);           // ひらがな
+            sb.Append("残響深夜佳和三國田畑早坂迅遠野灯椿林大地石亜衣上原中村唯北悠佐木玲");
+            sb.Append("音歪効果物理描画翻訳照明言葉進管指止動沈名前無戻多何水平消失");
+            sb.Append("※〓＃×■□─│┼");
+            _garblePool = sb.ToString().ToCharArray();
+            return _garblePool;
+        }
+
+        string Mojibake(string s)
         {
             if (string.IsNullOrEmpty(s)) return s;
+            var pool = GarblePool();
+            var font = _tmp != null ? _tmp.font : null;
             var a = s.ToCharArray();
             for (int i = 0; i < a.Length; i++)
-                if (a[i] != ' ' && a[i] != '　') a[i] = GarbleChars[Random.Range(0, GarbleChars.Length)];
+            {
+                if (a[i] == ' ' || a[i] == '　') continue;
+                char g = pool[Random.Range(0, pool.Length)];
+                for (int guard = 0; font != null && !font.HasCharacter(g) && guard < 8; guard++)
+                    g = pool[Random.Range(0, pool.Length)];
+                if (font != null && !font.HasCharacter(g)) g = 'ノ';   // 最後の保険(必ずある)
+                a[i] = g;
+            }
             return new string(a);
         }
 
@@ -209,7 +242,7 @@ namespace L8000
 
         public void BreakOpen() => Destroy_();
 
-        /// <summary>BackSpace で「ひとつ前に消した部分」を元に戻す。破壊数もその分戻す。</summary>
+        /// <summary>消したタイルを元に戻す。BackSpace(登り)/ 降りで通過したとき。破壊数もその分戻す。</summary>
         public void Restore()
         {
             if (!Destroyed) return;
@@ -218,6 +251,7 @@ namespace L8000
             _built = "\0";
             Rebuild(force: true);
             AudioManager.Play(Sfx.Shoot, 0.4f);
+            TileField.FireTileRestored(this, text ?? "");
         }
 
         /// <summary>可視文字の world 範囲(min/max)。レイアウト計算用。</summary>

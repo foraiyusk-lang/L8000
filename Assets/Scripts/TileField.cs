@@ -27,6 +27,9 @@ namespace L8000
         /// <summary>タイルが破壊されたとき (タイル, 文字列)。副作用フックが購読する。</summary>
         public static System.Action<CreditTile, string> OnTileDestroyed;
 
+        /// <summary>タイルが復元されたとき (タイル, 文字列)。降りで通過した所の機能を戻す。</summary>
+        public static System.Action<CreditTile, string> OnTileRestored;
+
         /// <summary>破壊された文字の総数(検証用)。</summary>
         public static int TotalCharsDestroyed;
 
@@ -76,6 +79,29 @@ namespace L8000
             if (t != null && Instance != null && !Instance._destroyed.Contains(t))
                 Instance._destroyed.Add(t);
             OnTileDestroyed?.Invoke(t, s);
+        }
+
+        public static void FireTileRestored(CreditTile t, string s)
+        {
+            if (t != null && Instance != null) Instance._destroyed.Remove(t);
+            OnTileRestored?.Invoke(t, s);
+        }
+
+        static readonly List<CreditTile> _restoreScratch = new List<CreditTile>();
+
+        /// <summary>降り中: プレイヤーが通過した(自分より上になった)破壊タイルを戻していく。</summary>
+        public void RestorePassedDuringDescent(float playerY)
+        {
+            _restoreScratch.Clear();
+            for (int i = _destroyed.Count - 1; i >= 0; i--)
+            {
+                var t = _destroyed[i];
+                if (t == null || !t.Destroyed) { _destroyed.RemoveAt(i); continue; }
+                if (t.isRule) continue;                                    // 最下部の床は撃って抜ける
+                if (t.transform.position.y <= playerY + 0.4f) continue;    // まだ通過していない(自分と同じ〜下)
+                _restoreScratch.Add(t);
+            }
+            foreach (var t in _restoreScratch) t.Restore();   // Restore が _destroyed から外す
         }
 
         /// <summary>

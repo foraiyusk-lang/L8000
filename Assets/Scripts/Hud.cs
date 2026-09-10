@@ -41,11 +41,22 @@ namespace L8000
             _last = remaining;
         }
 
-        /// <summary>UI 担当破壊 → 残り回数表示を永久に消す。</summary>
+        /// <summary>UI 担当破壊 → 残り回数表示を消す。</summary>
         public void Kill()
         {
             _killed = true;
             if (label != null) label.gameObject.SetActive(false);
+        }
+
+        /// <summary>降りで UI の所を通過 → 残り回数表示を戻す。</summary>
+        public void Revive()
+        {
+            _killed = false;
+            if (label != null)
+            {
+                label.gameObject.SetActive(true);
+                if (GameState.Instance != null) Refresh(GameState.Instance.Remaining);
+            }
         }
     }
 }

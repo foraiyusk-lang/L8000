@@ -27097,10 +27097,10 @@ MonoBehaviour:
   clockRoot: {fileID: 890502651}
   clockPivot: {fileID: 803191094}
   climbGrace: 7
-  climbVoidSpeed: 1
+  climbVoidSpeed: 1.4
   descentSpeed: 6.5
   descentNudge: 3.5
-  descentVoidSpeed: 0.8
+  descentVoidSpeed: 2.6
 --- !u!114 &456873703
 MonoBehaviour:
   m_ObjectHideFlags: 0

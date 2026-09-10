@@ -34,8 +34,23 @@ namespace L8000
             }
         }
 
-        void OnEnable() => TileField.OnTileDestroyed += OnTileDestroyed;
-        void OnDisable() => TileField.OnTileDestroyed -= OnTileDestroyed;
+        void OnEnable()
+        {
+            TileField.OnTileDestroyed += OnTileDestroyed;
+            TileField.OnTileRestored += OnTileRestored;
+        }
+        void OnDisable()
+        {
+            TileField.OnTileDestroyed -= OnTileDestroyed;
+            TileField.OnTileRestored -= OnTileRestored;
+        }
+
+        static string RoleOf(CreditTile tile)
+        {
+            string src = tile != null ? (tile.sourceLine ?? "") : "";
+            int sep = src.IndexOf("::");
+            return (sep >= 0 ? src.Substring(0, sep) : src).Trim();
+        }
 
         int _noiseFrame;
 
@@ -54,9 +69,7 @@ namespace L8000
         {
             if (tile == null) return;
             // その行のどこか(役職語でも名前でも)を壊せば、その担当の歪みが発動する。
-            string src = tile.sourceLine ?? "";
-            int sep = src.IndexOf("::");
-            string role = (sep >= 0 ? src.Substring(0, sep) : src).Trim();
+            string role = RoleOf(tile);
             string r = role.ToLowerInvariant();
             if (string.IsNullOrEmpty(r)) return;
 
@@ -84,6 +97,35 @@ namespace L8000
             ScreenFx.Toast(msg, new Color(0.95f, 0.45f, 0.4f), 2.2f);
             ScreenFx.Flash(new Color(0.6f, 0.05f, 0.05f, 0.32f), 0.5f);
             Debug.Log($"[Sabotage] {key}");
+        }
+
+        // --- 降りで通過した所の機能を戻す(FB11)---------------------------
+        void OnTileRestored(CreditTile tile, string chars)
+        {
+            if (tile == null) return;
+            string r = RoleOf(tile).ToLowerInvariant();
+            string role = RoleOf(tile);
+            if (string.IsNullOrEmpty(r)) return;
+
+            if (r.Contains("music") || r.Contains("composer")) Unfire("bgm", "音", () => AudioManager.Instance?.RestoreBgm());
+            if (r.Contains("sound director")) Unfire("sfx", "効果音", () => AudioManager.Instance?.ReviveSfx());
+            if (r.Contains("physics programmer")) Unfire("physics", "物理", () => PlayerController.PhysicsAnomaly = false);
+            if (r.Contains("graphics programmer") || r.Contains("rendering")) Unfire("noise", "描画", () => { if (graphicsNoise != null) graphicsNoise.enabled = false; });
+            if (r.Contains("localization")) Unfire("garble", "翻訳", () => { TileField.Garble = false; TileField.Instance?.RefreshAll(); });
+            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Unfire("ui", "UI", () => hud?.Revive());
+            if (r.Contains("lighting")) Unfire("light", "照明", () => ScreenFx.Vignette(0f, 1.5f));
+            if (r.Contains("cinematics") || r.Contains("camera")) Unfire("frame", "画面の水平", () => CameraFollow.FrameBroken = false);
+            if (r.Contains("writer") || r.Contains("script editor")) Unfire("writing", "言葉", () => Finale.WritingBroken = false);
+            if (role == "Producer") Unfire("producer", "進行管理", () => { if (GameState.Instance != null) GameState.Instance.spendMultiplier = 1f; });
+        }
+
+        void Unfire(string key, string label, System.Action revert)
+        {
+            if (!_fired.Remove(key)) return;
+            revert?.Invoke();
+            ScreenFx.Toast($"― {label} もどる ―", new Color(0.68f, 0.82f, 0.96f), 1.8f);
+            AudioManager.Play(Sfx.Shoot, 0.35f);
+            Debug.Log($"[Sabotage] {key} restored");
         }
 
         void ShowNoise()

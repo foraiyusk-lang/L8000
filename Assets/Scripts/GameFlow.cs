@@ -28,14 +28,14 @@ namespace L8000
 
         [Header("登り")]
         public float climbGrace = 7f;
-        public float climbVoidSpeed = 1.0f;   // ジグザグ登り(端まで歩く)は ~1.5-2.5u/s。動いていれば振り切れる。止まると ~10秒で捕まる(-100・復帰可)。
+        public float climbVoidSpeed = 1.4f;   // 少し速め(FB11: もう少し早くても問題ない)。動いていれば振り切れる。止まると数秒で捕まる(-100・復帰可)。
 
         [Header("降り")]
         public float descentSpeed = 6.5f;
         public float descentNudge = 3.5f;
-        // 降りは密な足場を自分で降りていく(FB: 当たり判定は登りと同じ)。以前の
-        // 「速い自動降下」前提が崩れたので、無は静かな残響程度に(重力落下で必ず引き離せる)。
-        public float descentVoidSpeed = 0.8f;
+        // 降りは密な足場を自分で降りていく。無は登りより速く迫ってよい(FB11)。
+        // 重力落下より遅いので離せるが、のんびりはできない緊張感。
+        public float descentVoidSpeed = 2.6f;
 
         enum Phase { Climb, Rewind, Descent, Bottom, Done }
         Phase _phase = Phase.Climb;
@@ -214,6 +214,9 @@ namespace L8000
             var c = viewCamera.transform.position;
             c.y = Mathf.Lerp(c.y, p.y + 1.5f, 12f * dt);
             viewCamera.transform.position = c;
+
+            // 通過した所は戻る = 壊した機能/要素がどんどん元に戻る(FB11)
+            streamer.RestorePassedDuringDescent(p.y);
 
             if (p.y <= streamer.BottomY + 3.0f) BeginBottom();   // 最下部付近(===== や @行 に着地)まで来たら
         }

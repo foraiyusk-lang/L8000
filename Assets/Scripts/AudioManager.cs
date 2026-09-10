@@ -209,6 +209,18 @@ namespace L8000
             if (_bgm != null) _bgm.volume = v0 * 0.8f;
         }
 
+        /// <summary>降りで Music の所を通過: 歪みを解いて元の音へ。</summary>
+        public void RestoreBgm()
+        {
+            if (!_bgmBroken) return;
+            _bgmBroken = false;
+            if (_dist != null) { _dist.distortionLevel = 0f; _dist.enabled = false; }
+            if (_lp != null)   { _lp.cutoffFrequency = 22000f; _lp.enabled = false; }
+            if (_hp != null)   { _hp.cutoffFrequency = 10f;    _hp.enabled = false; }
+            if (_hiss != null) { _hiss.Stop(); _hiss.volume = 0f; }
+            if (_bgm != null) _bgm.volume = bgmVolume;
+        }
+
         static AudioClip WhiteNoise(float dur)
         {
             int n = Mathf.CeilToInt(SR * dur);
@@ -228,6 +240,9 @@ namespace L8000
             _sfxKilled = true;
             if (_sfx != null) _sfx.Stop();
         }
+
+        /// <summary>降りで Sound Director の所を通過: 効果音を戻す。</summary>
+        public void ReviveSfx() => _sfxKilled = false;
 
         /// <summary>設定スライダーの反映。</summary>
         public void ApplyVolumes()
