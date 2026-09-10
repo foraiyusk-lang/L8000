@@ -938,6 +938,20 @@ commit 1183b9f:
   フラットにしたいなら `Spend` に raw 版を足して `catchCost` をそれで払う。
 - console error 0・コード変更なし。
 
+### 済(2026-09-10 21:45頃) — 無の捕獲代償を消費倍率の対象外に(commit 3c4e697)
+- 前イテレーションで「観察」に留めた件を、README との整合性=**仕様バグ**と判断して修正。
+  Producer 破壊(spendMultiplier 1.5)中は無の捕獲代償が 100→150 になり、
+  README「捕まると残り回数を 100 失う」と食い違っていた。捕獲は入力ではなく
+  ペナルティなので倍率対象外にするのが正しい。
+- **実装**: `GameState` の減算コアを `Deduct()` に抽出。
+  `Spend()`=倍率あり(移動/跳/撃)、`SpendRaw()`=倍率なし(捕獲代償)。
+  `Depleted`/`OnDepleted` は共通経路。`VoidRiser.Catch` を `SpendRaw` に。
+- **検証**: mult=1.5 で `SpendRaw(100)`→ちょうど100 / `Spend(1)`×10→15 /
+  実捕獲(Producer 破壊済み)→ちょうど100 / 残り0到達で `OnDepleted` 発火
+  (バッドエンド接続)を維持。console error/warning 0。
+- **配布ビルド再作成**: script-only Succeeded 95MB errors=0、dll 21:55、
+  exe 起動 run.log クリーン、zip 差し替え 43.5MB。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
@@ -946,3 +960,6 @@ commit 1183b9f:
 5. BGM/SE の**音色・音量バランス**の実聴(機構面=ループ/逆再生/クリップ/アタックは
    波形解析で確認済み・2026-09-10 のログ参照)。
 6. (任意)肥大した `AppData/Local/Unity/Editor/Editor.log` を削除。
+7. **credits.txt の `S. Novak` 重複**(Engine Programmer / Compliance QA)。意図的なら放置、
+   誤りなら片方を別名に。他は全員ユニーク。
+   (※ Producer×捕獲の消費倍率は 3c4e697 で修正済み・判断不要)
