@@ -969,6 +969,24 @@ commit 1183b9f:
 - (※ 途中 reflection で private を叩く execute_code が1回ツール制限で拒否されたが、
   Transform 位置操作など public API 経由で通せた。)
 
+### 済(2026-09-10 23:05頃) — プレイ中 Esc 2回でタイトルへ(commit d829702)
+- **発見**: 同梱 README は「Esc タイトルへ」と書いていたが Main 側に Esc ハンドラが無く、
+  未実装だった(自分で書いた README と実装の食い違い)。放置されたプレイヤーは
+  無に -100 ずつ削られてバッドエンド終幕まで数分。TGS ブースで次の人へ渡せない。
+- **実装**: `GameFlow.Update`(Phase != Done)で Esc を拾う。`_escArm` 1.6s の
+  ダブルタップ判定(1回目は誤爆防止で「もう一度 Esc で タイトルへ」トーストのみ)。
+  2回目で `SceneManager.LoadScene("Title")`。終幕中は無効。
+- **検証**: 
+  - コンパイル 0エラー、GameFlow.Update に新経路を入れて 5s プレイ → 例外 0・通常進行。
+  - 汚した static(Garble/FrameBroken/PhysAnom/WritingBroken)で Title へ遷移 →
+    Title は正常描画(それらを読むコンポーネントが無い)→ ゲーム再開で
+    `GameState.Awake` が全リセットを確認。AudioManager はシーン単位で歪み持ち越しなし。
+  - ⚠️ 実キー入力の注入はできないため `Input.GetKeyDown` 検出自体は未実機確認。
+    コードは標準・Main で Esc を使う他コード無し・遷移先は検証済み。
+- README の Esc 行を「設定を閉じる / プレイ中は 2回でタイトルへ」に更新。
+- **配布ビルド再作成**: Succeeded 95MB errors=0、dll/readme 23:28、exe run.log クリーン、
+  zip 差し替え 43.5MB。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
