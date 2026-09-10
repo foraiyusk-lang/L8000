@@ -802,6 +802,23 @@ commit 1183b9f:
   (17:30)、data.unity3d は据え置き(シーン変更なし)。exe 起動 run.log クリーン
   (engine/PhysX/input 初期化のみ、例外なし)。zip 差し替え 43.5MB。
 
+### 済(2026-09-10 17:50頃) — 降りの一括復元で効果音の重なりを解消(commit 045ecc0)
+- **前イテレーションの続き**(降りの復帰位置バグの周辺を点検して発見):
+  降りで破壊タイルを通過復元する時、密集して壊した区間では 1フレームに最大3枚
+  戻り、`Sfx.Shoot` が重なって鳴っていた(実測: 30枚破壊の通し降りで
+  「1フレーム3枚復元」×5回、「2枚」×7回)。「静かで寂しい」世界観に不整合。
+- **修正**: `CreditTile.Restore(bool silent=false)` を追加。
+  `TileField.RestorePassedDuringDescent` は `Restore(silent:true)` で呼ぶ。
+  区切りの音・トーストは `SabotageDirector.Unfire` が役割ごとに1回だけ鳴らす
+  (= 意味のある「機能が戻った」瞬間だけ音が出る)。
+  BackSpace(登りの `UndoLastAbove`)は従来どおり音あり。
+- **検証**(Play・reflection): 15枚破壊 → 降り一括復元で全復元、
+  sfx サボ反転(`_sfxKilled` True→False)、`_fired` 空、例外 0。
+  呼び出し箇所は2つのみ・BackSpace 経路は不変。console error/warning 0。
+- **配布ビルド再作成**: script-only build Succeeded 95MB errors=0(warnings=1 は
+  shader 等の非決定的なビルドパイプライン通知。CS 警告ではない・前ビルドでも交互に出る)。
+  Assembly-CSharp.dll 更新(17:57)、exe 起動 run.log クリーン、zip 差し替え 43.5MB。
+
 ### ユーザーの判断待ち(これが無いと night-shift は小さな検証/調査に留まる)
 1. **ゲート天井の装飾**: 現状(29e7c64 で部分改善)で妥協 / レベル高 ±5〜6% 許容してフル修正 / 触らない。
 2. **A3 ポスター**: 右パネルの黒み・本文量・構図。前回送った版へのFB。
