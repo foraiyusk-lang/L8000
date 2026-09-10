@@ -99,11 +99,15 @@ def credit_all():
 POSTER_BODY = [
     "名前を ひとつ 撃つと、床が 一枚 でき、",
     "その人が 支えていた 何かが すこし 狂う。",
-    "音。光。重力。文字。",
+    "―― 音。光。重力。文字。",
     "",
-    "のぼりきると 巻き戻りが 止まり、",
+    "のぼりきると、巻き戻りが 止まる。",
     "あとは 来た道を 降りるだけ。",
-    "―― 下から、無が 来ている。",
+    "",
+    "下からは ずっと、無が 来ている。",
+    "捕まれば、大きく 戻される。",
+    "",
+    "何回 押せるか ―― それだけの ゲーム。",
 ]
 
 
@@ -164,15 +168,17 @@ def make_poster():
     dr.rectangle([split_x, 0, split_x + 8, void_y], fill=RED)
 
     tx = split_x + int(15 * MM)
-    ty = pad + int(18 * MM)
+    ty = pad + int(14 * MM)
     for s in ["エンドロールを、", "いちばん下から", "登る。"]:
-        txt(cv, s, tx, ty, 104, INK)
-        ty += int(26 * MM)
-    ty += int(14 * MM)
+        txt(cv, s, tx, ty, 96, INK)
+        ty += int(24 * MM)
+    ty += int(13 * MM)
     for s in POSTER_BODY:
         if s:
             txt(cv, s, tx, ty, 32, SOFT)
-        ty += int(17 * MM)
+            ty += int(15 * MM)
+        else:
+            ty += int(9 * MM)
 
     # === 下端: 「無」。全幅をハードに断つ。縁は赤 ===
     dr.rectangle([0, void_y, W, H], fill=VOID)
