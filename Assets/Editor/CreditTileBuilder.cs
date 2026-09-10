@@ -308,15 +308,20 @@ namespace L8000.EditorTools
                     s1.c.transform.position = new Vector3(s0.w * 0.5f + s1.w * 0.5f, standY, 0f);
                 }
             }
-            // 3) 天井 = 見えない封鎖コライダ(GateSeal)+ 中央の saboTile。
-            //    封鎖は GateSeal が担う。saboTile だけが中央の穴を塞ぎ、撃つと開く。
-            //    他タイルは天井高さに「文字だけ」並べる(当たり判定なし)= 名前の壁の見た目。
+            // 3) 天井 = 語タイルを横一列に(実コライダ)。語と語の間は Gap ~0.4 だけ空ける。
+            //    ・撃たない: プレイヤー幅 0.22 → 隙間を狙って跳ね抜ける = 「うまい人」だけ通れる(FB12)。
+            //    ・sabo タイル(中央)を撃つ: 外れて広い穴 = 誰でも通れる。
+            //    ・語列の外側〜壁 は見えない GateSeal で塞ぐ(すり抜け防止)。
             const float CeilEdge = HalfW + 0.9f;
+            const float Gap = 0.4f;
             float ceilY = standY + 2.1f;
 
+            gate.saboTile.c.noCollider = false;
+            gate.saboTile.c.Rebuild(true);
             gate.saboTile.c.transform.position = new Vector3(0f, ceilY, 0f);
+            UnityEngine.Physics2D.SyncTransforms();
 
-            // 穴の上の着地足場(必須): ceilTiles から 2枚。穴(x=0)を避けて右へ。
+            // 穴の上の着地足場(撃ち抜き時用): ceilTiles から 2枚。穴(x=0)を避けて右へ。
             var landing = new List<Tile>();
             float landY = ceilY + 2.4f;
             {
@@ -330,32 +335,68 @@ namespace L8000.EditorTools
                 }
             }
 
-            // 装飾タイル(当たり判定なし)を天井の左右へ交互に散らす
+            // 天井の語列: sabo の左右へ、実コライダで Gap を空けて並べる。
+            //   タイル幅は「実コライダ幅」で測る(推定値 t.w だと隙間がずれる)。
             var leftover = new List<Tile>();
-            float saboHalf = Mathf.Max(0.9f, gate.saboTile.w * 0.5f);
-            float dlx = -saboHalf - 0.3f, drx = saboHalf + 0.3f;
-            bool toRight = true;
-            foreach (var t in ceilTiles)
-            {
-                t.c.noCollider = true;
-                if (toRight && drx + t.w <= CeilEdge) { t.c.transform.position = new Vector3(drx + t.w * 0.5f, ceilY, 0f); drx += t.w + 0.45f; toRight = false; }
-                else if (dlx - t.w >= -CeilEdge)     { t.c.transform.position = new Vector3(dlx - t.w * 0.5f, ceilY, 0f); dlx -= t.w + 0.45f; toRight = true; }
-                else if (drx + t.w <= CeilEdge)      { t.c.transform.position = new Vector3(drx + t.w * 0.5f, ceilY, 0f); drx += t.w + 0.45f; }
-                else leftover.Add(t);
-            }
-
-            // GateSeal: sabo の左右を塞ぐ見えないコライダ
+            var rowTiles = new List<Tile> { gate.saboTile };
             {
                 UnityEngine.Physics2D.SyncTransforms();
-                var sbnd = gate.saboTile.c.GetComponent<BoxCollider2D>().bounds;
-                float sL = sbnd.min.x - 0.1f, sR = sbnd.max.x + 0.1f;
+                var sb0 = gate.saboTile.c.GetComponent<BoxCollider2D>().bounds;
+                float rx = sb0.max.x + Gap;     // 次に置くタイルの左端 x
+                float lx = sb0.min.x - Gap;     // 次に置くタイルの右端 x
+                bool toRight = true;
+                // 実コライダ幅を取得(必要なら Rebuild)
+                float ColW(Tile t) { t.c.noCollider = false; t.c.Rebuild(true); return t.c.GetComponent<BoxCollider2D>().size.x; }
+                void SnapLeft(Tile t, float leftX)
+                {
+                    t.c.transform.position = new Vector3(leftX + 2f, ceilY, 0f);
+                    UnityEngine.Physics2D.SyncTransforms();
+                    var b = t.c.GetComponent<BoxCollider2D>().bounds;
+                    t.c.transform.position += new Vector3(leftX - b.min.x, 0f, 0f);
+                    UnityEngine.Physics2D.SyncTransforms();
+                }
+                void SnapRight(Tile t, float rightX)
+                {
+                    t.c.transform.position = new Vector3(rightX - 2f, ceilY, 0f);
+                    UnityEngine.Physics2D.SyncTransforms();
+                    var b = t.c.GetComponent<BoxCollider2D>().bounds;
+                    t.c.transform.position += new Vector3(rightX - b.max.x, 0f, 0f);
+                    UnityEngine.Physics2D.SyncTransforms();
+                }
+                foreach (var t in ceilTiles)
+                {
+                    float w = ColW(t);
+                    bool canR = rx + w + 0.05f <= CeilEdge;
+                    bool canL = lx - w - 0.05f >= -CeilEdge;
+                    if (toRight && canR)
+                    { SnapLeft(t, rx); rx = t.c.GetComponent<BoxCollider2D>().bounds.max.x + Gap; rowTiles.Add(t); toRight = false; }
+                    else if (!toRight && canL)
+                    { SnapRight(t, lx); lx = t.c.GetComponent<BoxCollider2D>().bounds.min.x - Gap; rowTiles.Add(t); toRight = true; }
+                    else if (canR)
+                    { SnapLeft(t, rx); rx = t.c.GetComponent<BoxCollider2D>().bounds.max.x + Gap; rowTiles.Add(t); }
+                    else if (canL)
+                    { SnapRight(t, lx); lx = t.c.GetComponent<BoxCollider2D>().bounds.min.x - Gap; rowTiles.Add(t); }
+                    else { t.c.noCollider = true; leftover.Add(t); }
+                }
+            }
+
+            // GateSeal: 語列の外側(端タイル〜壁)だけを塞ぐ。語間の隙間は塞がない。
+            {
+                UnityEngine.Physics2D.SyncTransforms();
+                float rMost = -CeilEdge, lMost = CeilEdge;
+                foreach (var t in rowTiles)
+                {
+                    var b = t.c.GetComponent<BoxCollider2D>().bounds;
+                    if (b.max.x > rMost) rMost = b.max.x;
+                    if (b.min.x < lMost) lMost = b.min.x;
+                }
                 var seal = new GameObject("GateSeal");
                 seal.transform.SetParent(gate.saboTile.c.transform.parent, false);
                 int gl = LayerMask.NameToLayer("Ground");
                 if (gl >= 0) seal.layer = gl;
                 float h = CreditTile.CellHeight * 0.95f;
-                MakeSealBox(seal, (-CeilEdge + sL) * 0.5f, ceilY, sL - (-CeilEdge), h);
-                MakeSealBox(seal, (CeilEdge + sR) * 0.5f, ceilY, CeilEdge - sR, h);
+                MakeSealBox(seal, (rMost + CeilEdge) * 0.5f, ceilY, CeilEdge - rMost, h);
+                MakeSealBox(seal, (-CeilEdge + lMost) * 0.5f, ceilY, lMost - (-CeilEdge), h);
             }
 
             // 4) 天井の上: 着地足場より上へ、残りの行を中央始点の階段で。
