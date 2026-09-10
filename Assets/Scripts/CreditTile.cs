@@ -233,7 +233,9 @@ namespace L8000
         {
             if (Destroyed) return;
             Destroyed = true;
-            TileField.TotalCharsDestroyed += Mathf.Max(1, (text ?? "").Length);
+            // 最下部の ===== は「出口」であり名前ではない。撃つのは必須なので破壊数に数えない
+            // (終幕の「いくつの名前を消したか」分岐を歪めないため)。
+            if (!isRule) TileField.TotalCharsDestroyed += Mathf.Max(1, (text ?? "").Length);
             Rebuild(force: true);
             AudioManager.Play(Sfx.Hit, 0.6f);
             TileField.FireTileDestroyed(this, text ?? "");
@@ -250,7 +252,7 @@ namespace L8000
         {
             if (!Destroyed) return;
             Destroyed = false;
-            TileField.TotalCharsDestroyed = Mathf.Max(0, TileField.TotalCharsDestroyed - Mathf.Max(1, (text ?? "").Length));
+            if (!isRule) TileField.TotalCharsDestroyed = Mathf.Max(0, TileField.TotalCharsDestroyed - Mathf.Max(1, (text ?? "").Length));
             _built = "\0";
             Rebuild(force: true);
             if (!silent) AudioManager.Play(Sfx.Shoot, 0.4f);
