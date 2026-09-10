@@ -193,16 +193,25 @@ namespace L8000
             if (wpn != null && Mode == VoidMode.RiseFromBelow) wpn.CanFire = true;   // 登り中のみ射撃可
         }
 
-        /// <summary>safeBaseY 付近で、逃げる向きにある足場の上(または下)＝中央寄りの安全地点。</summary>
+        /// <summary>
+        /// 逃げる向き(登り=上 / 降り=下)の先にある足場の「上面」へ乗せる。中央寄りを優先。
+        /// どちらの向きでも下向きに撃って足場の天面を拾う(登りは頭上の段、降りは足元より下の段)。
+        /// </summary>
         Vector2 FindSafeSpot(float baseY)
         {
             float[] xs = { 0f, -0.9f, 0.9f, -1.8f, 1.8f };
+            // 登り: 現在地より上から下向きに → 上の段の天面。
+            // 降り: 現在の足場をまたいだ真下から下向きに → 次の下の段の天面。
+            float castTop = Dir > 0 ? baseY + 4f : baseY - 0.9f;
             foreach (float x in xs)
             {
-                Vector2 from = new Vector2(x, baseY + Dir * 4f);
-                var hit = Physics2D.Raycast(from, Dir > 0 ? Vector2.down : Vector2.up, 8f, _groundMask);
-                if (hit.collider != null)
-                    return new Vector2(x, hit.point.y + Dir * 0.22f);
+                var hit = Physics2D.Raycast(new Vector2(x, castTop), Vector2.down, 12f, _groundMask);
+                if (hit.collider == null) continue;
+                Vector2 spot = new Vector2(x, hit.point.y + 0.22f);
+                if (Dir > 0) return spot;   // 登り: 従来どおり(頭上クリアランスは既存レベルで担保)
+                // 降り: 天井(ゲート等)に潰される位置は避け、次の候補へ
+                if (Physics2D.OverlapBox(spot + new Vector2(0f, 0.05f), new Vector2(0.22f, 0.28f), 0f, _groundMask) == null)
+                    return spot;
             }
             return new Vector2(0f, baseY);
         }
