@@ -157,7 +157,7 @@ namespace L8000
             string n = nameField != null ? nameField.text.Trim() : "";
             if (string.IsNullOrEmpty(n))
             {
-                if (hint != null) StartCoroutine(FlashHint("なまえ を いれてください"));
+                if (hint != null) StartCoroutine(FlashHint(Localization.T("title_name_hint")));
                 if (nameField != null) { nameField.Select(); nameField.ActivateInputField(); }
                 return;
             }

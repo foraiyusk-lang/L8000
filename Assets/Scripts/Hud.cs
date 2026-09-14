@@ -9,8 +9,6 @@ namespace L8000
     public class Hud : MonoBehaviour
     {
         public TextMeshProUGUI label;
-        [Tooltip("表示テキストの書式。{0}=残り回数。")]
-        public string format = "残り {0}";
 
         bool _killed;
         int _last = -1;
@@ -20,11 +18,18 @@ namespace L8000
         void OnEnable()
         {
             GameState.OnChanged += Refresh;
+            Localization.OnChanged += RefreshLast;
             if (label != null) _baseColor = label.color;
             if (GameState.Instance != null) { _last = GameState.Instance.Remaining; Refresh(_last); }
         }
 
-        void OnDisable() => GameState.OnChanged -= Refresh;
+        void OnDisable()
+        {
+            GameState.OnChanged -= Refresh;
+            Localization.OnChanged -= RefreshLast;
+        }
+
+        void RefreshLast() { if (_last >= 0) Refresh(_last); }
 
         void Update()
         {
@@ -36,7 +41,7 @@ namespace L8000
         void Refresh(int remaining)
         {
             if (_killed || label == null) return;
-            label.text = string.Format(format, remaining);
+            label.text = string.Format(Localization.T("hud_remaining"), remaining);
             if (_last >= 0 && _last - remaining >= 25) _flash = 1f;   // 大きく減ったら赤く点滅(無に捕まった等)
             _last = remaining;
         }

@@ -73,23 +73,24 @@ namespace L8000
             string r = role.ToLowerInvariant();
             if (string.IsNullOrEmpty(r)) return;
 
-            if (r.Contains("music") || r.Contains("composer")) Fire("bgm", "音が 歪む", () => AudioManager.Instance?.DistortBgm(), "");
-            if (r.Contains("sound director")) Fire("sfx", "効果音", () => AudioManager.Instance?.KillSfx());
-            if (r.Contains("physics programmer")) Fire("physics", "物理", () => PlayerController.PhysicsAnomaly = true);
-            if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", "描画", ShowNoise);
-            if (r.Contains("localization")) Fire("garble", "翻訳", () => { TileField.Garble = true; TileField.Instance?.RefreshAll(); });
-            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", "UI", () => hud?.Kill());
-            if (r.Contains("lighting")) Fire("light", "照明", () => ScreenFx.Vignette(0.4f, 2f));
-            if (r.Contains("cinematics") || r.Contains("camera")) Fire("frame", "画面の水平", () => CameraFollow.FrameBroken = true);
-            if (r.Contains("writer") || r.Contains("script editor")) Fire("writing", "言葉", () => Finale.WritingBroken = true);
-            if (role == "Producer") Fire("producer", "進行管理", () =>
+            if (r.Contains("music") || r.Contains("composer")) Fire("bgm", Localization.T("sab_bgm"), () => AudioManager.Instance?.DistortBgm(), "");
+            if (r.Contains("sound director")) Fire("sfx", Localization.T("sab_sfx"), () => AudioManager.Instance?.KillSfx());
+            if (r.Contains("physics programmer")) Fire("physics", Localization.T("sab_physics"), () => PlayerController.PhysicsAnomaly = true);
+            if (r.Contains("graphics programmer") || r.Contains("rendering")) Fire("noise", Localization.T("sab_graphics"), ShowNoise);
+            if (r.Contains("localization")) Fire("garble", Localization.T("sab_localization"), () => { TileField.Garble = true; TileField.Instance?.RefreshAll(); });
+            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Fire("ui", Localization.T("sab_ui"), () => hud?.Kill());
+            if (r.Contains("lighting")) Fire("light", Localization.T("sab_lighting"), () => ScreenFx.Vignette(0.4f, 2f));
+            if (r.Contains("cinematics") || r.Contains("camera")) Fire("frame", Localization.T("sab_camera"), () => CameraFollow.FrameBroken = true);
+            if (r.Contains("writer") || r.Contains("script editor")) Fire("writing", Localization.T("sab_writing"), () => Finale.WritingBroken = true);
+            if (role == "Producer") Fire("producer", Localization.T("sab_producer"), () =>
             {
                 if (GameState.Instance != null) GameState.Instance.spendMultiplier = 1.5f;
             });
         }
 
-        void Fire(string key, string label, System.Action effect, string verb = "消失")
+        void Fire(string key, string label, System.Action effect, string verb = null)
         {
+            verb ??= Localization.T("sab_verb_lost");
             if (!_fired.Add(key)) return;
             effect?.Invoke();
             AudioManager.Play(Sfx.Break);
@@ -107,23 +108,23 @@ namespace L8000
             string role = RoleOf(tile);
             if (string.IsNullOrEmpty(r)) return;
 
-            if (r.Contains("music") || r.Contains("composer")) Unfire("bgm", "音", () => AudioManager.Instance?.RestoreBgm());
-            if (r.Contains("sound director")) Unfire("sfx", "効果音", () => AudioManager.Instance?.ReviveSfx());
-            if (r.Contains("physics programmer")) Unfire("physics", "物理", () => PlayerController.PhysicsAnomaly = false);
-            if (r.Contains("graphics programmer") || r.Contains("rendering")) Unfire("noise", "描画", () => { if (graphicsNoise != null) graphicsNoise.enabled = false; });
-            if (r.Contains("localization")) Unfire("garble", "翻訳", () => { TileField.Garble = false; TileField.Instance?.RefreshAll(); });
-            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Unfire("ui", "UI", () => hud?.Revive());
-            if (r.Contains("lighting")) Unfire("light", "照明", () => ScreenFx.Vignette(0f, 1.5f));
-            if (r.Contains("cinematics") || r.Contains("camera")) Unfire("frame", "画面の水平", () => CameraFollow.FrameBroken = false);
-            if (r.Contains("writer") || r.Contains("script editor")) Unfire("writing", "言葉", () => Finale.WritingBroken = false);
-            if (role == "Producer") Unfire("producer", "進行管理", () => { if (GameState.Instance != null) GameState.Instance.spendMultiplier = 1f; });
+            if (r.Contains("music") || r.Contains("composer")) Unfire("bgm", Localization.T("sab_bgm_restore"), () => AudioManager.Instance?.RestoreBgm());
+            if (r.Contains("sound director")) Unfire("sfx", Localization.T("sab_sfx"), () => AudioManager.Instance?.ReviveSfx());
+            if (r.Contains("physics programmer")) Unfire("physics", Localization.T("sab_physics"), () => PlayerController.PhysicsAnomaly = false);
+            if (r.Contains("graphics programmer") || r.Contains("rendering")) Unfire("noise", Localization.T("sab_graphics"), () => { if (graphicsNoise != null) graphicsNoise.enabled = false; });
+            if (r.Contains("localization")) Unfire("garble", Localization.T("sab_localization"), () => { TileField.Garble = false; TileField.Instance?.RefreshAll(); });
+            if (r.StartsWith("ui ") || r.Contains("ui /") || r.Contains("ux")) Unfire("ui", Localization.T("sab_ui"), () => hud?.Revive());
+            if (r.Contains("lighting")) Unfire("light", Localization.T("sab_lighting"), () => ScreenFx.Vignette(0f, 1.5f));
+            if (r.Contains("cinematics") || r.Contains("camera")) Unfire("frame", Localization.T("sab_camera"), () => CameraFollow.FrameBroken = false);
+            if (r.Contains("writer") || r.Contains("script editor")) Unfire("writing", Localization.T("sab_writing"), () => Finale.WritingBroken = false);
+            if (role == "Producer") Unfire("producer", Localization.T("sab_producer"), () => { if (GameState.Instance != null) GameState.Instance.spendMultiplier = 1f; });
         }
 
         void Unfire(string key, string label, System.Action revert)
         {
             if (!_fired.Remove(key)) return;
             revert?.Invoke();
-            ScreenFx.Toast($"― {label} もどる ―", new Color(0.68f, 0.82f, 0.96f), 1.8f);
+            ScreenFx.Toast($"― {label} {Localization.T("sab_verb_back")} ―", new Color(0.68f, 0.82f, 0.96f), 1.8f);
             AudioManager.Play(Sfx.Shoot, 0.35f);
             Debug.Log($"[Sabotage] {key} restored");
         }

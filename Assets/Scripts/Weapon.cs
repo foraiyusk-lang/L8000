@@ -48,7 +48,7 @@ namespace L8000
                 var tf = TileField.Instance;
                 if (tf != null && tf.UndoLastAbove(transform.position.y))
                 {
-                    ScreenFx.Toast("― もどした ―", new Color(0.7f, 0.82f, 0.95f), 1.4f);
+                    ScreenFx.Toast(Localization.T("weapon_restored"), new Color(0.7f, 0.82f, 0.95f), 1.4f);
                 }
             }
 

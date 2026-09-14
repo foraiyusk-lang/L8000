@@ -86,7 +86,7 @@ namespace L8000
             {
                 worldText.gameObject.SetActive(true);
                 string branch = EndSequence_FinalLine(badEnd, TileField.TotalCharsDestroyed);
-                worldText.text = $"PLAYED BY\n\n{PlayerName.Display}\n\n\n<size=55%>{branch}</size>";
+                worldText.text = $"{Localization.T("finale_played_by")}\n\n{PlayerName.Display}\n\n\n<size=55%>{branch}</size>";
                 worldText.ForceMeshUpdate();
 
                 float halfH = viewCamera != null ? viewCamera.orthographicSize : 5f;
@@ -142,13 +142,13 @@ namespace L8000
             if (WritingBroken) return "██████ ████ ███████████。";
             if (badEnd)
             {
-                if (destroyed <= 0) return "指が止まった。ここまでだった。";
-                return "動けなくなって、名前ごと沈んだ。";
+                if (destroyed <= 0) return Localization.T("finale_bad_zero");
+                return Localization.T("finale_bad_some");
             }
             if (destroyed <= 0) return "";
-            if (destroyed < 20) return "いくつかの名前は、もう戻らない。";
-            if (destroyed < 80) return "多くの名前が、無くなった。";
-            return "ほとんど、何も残らなかった。それでも、戻ってきた。";
+            if (destroyed < 20) return Localization.T("finale_good_few");
+            if (destroyed < 80) return Localization.T("finale_good_many");
+            return Localization.T("finale_good_most");
         }
     }
 }

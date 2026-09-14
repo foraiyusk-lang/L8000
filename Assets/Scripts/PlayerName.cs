@@ -25,6 +25,6 @@ namespace L8000
         }
 
         /// <summary>表示用。空なら控えめなプレースホルダ。</summary>
-        public static string Display => string.IsNullOrWhiteSpace(Value) ? "名も無き登坂者" : Value.Trim();
+        public static string Display => string.IsNullOrWhiteSpace(Value) ? Localization.T("finale_default_name") : Value.Trim();
     }
 }

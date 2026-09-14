@@ -119,7 +119,7 @@ namespace L8000
                 {
                     if (_escArm > 0f) { SceneManager.LoadScene("Title"); return; }
                     _escArm = 1.6f;
-                    ScreenFx.Toast("もう一度 Esc で タイトルへ", new Color(0.8f, 0.85f, 0.95f), 1.3f);
+                    ScreenFx.Toast(Localization.T("flow_esc_confirm"), new Color(0.8f, 0.85f, 0.95f), 1.3f);
                 }
             }
 
@@ -153,7 +153,7 @@ namespace L8000
             if (weapon != null) weapon.CanFire = false;
             voidRiser.Stop();
 
-            ScreenFx.Toast("― 巻き戻しが 止まる ―", new Color(0.85f, 0.9f, 1f), 3.4f);
+            ScreenFx.Toast(Localization.T("flow_rewind_stop"), new Color(0.85f, 0.9f, 1f), 3.4f);
             AudioManager.Instance?.CrossfadeToForward(2.8f);   // 逆→順(途中で一瞬止まる)
 
             // 背景を暗く(時計を見せる。HUD Canvas 上なので確実に前面)
@@ -218,7 +218,7 @@ namespace L8000
             voidRiser.Stop();
             voidRiser.Trigger(VoidMode.FallFromAbove, descentVoidSpeed);
 
-            ScreenFx.Banner("▼ もどっている", new Color(0.7f, 0.76f, 0.88f, 1f));
+            ScreenFx.Banner(Localization.T("flow_descending"), new Color(0.7f, 0.76f, 0.88f, 1f));
         }
 
         void TickDescent()
@@ -251,7 +251,7 @@ namespace L8000
             if (weapon != null) { weapon.CanFire = true; weapon.FireDown = true; }
             var cam = viewCamera.transform.position; cam.y = streamer.BottomY + 2.5f; viewCamera.transform.position = cam;
             ScreenFx.Banner(null, Color.white);
-            ScreenFx.Toast("↓ Enter で この線を 抜ける", new Color(0.85f, 0.9f, 1f), 4f);
+            ScreenFx.Toast(Localization.T("flow_bottom_prompt"), new Color(0.85f, 0.9f, 1f), 4f);
             ScreenFx.Banner("↓ Enter", new Color(0.7f, 0.76f, 0.88f, 1f));
         }
 
