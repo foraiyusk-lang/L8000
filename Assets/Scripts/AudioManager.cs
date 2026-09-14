@@ -235,20 +235,26 @@ namespace L8000
             return clip;
         }
 
+        /// <summary>Sound Director 破壊: 効果音を消す。既存の再生を断ち切って耳障りな音を出さないよう、
+        /// 音量を0にするだけ(Stop()で途中の波形を切ると "ザッ" というノイズが出るため使わない)。</summary>
         public void KillSfx()
         {
             _sfxKilled = true;
-            if (_sfx != null) _sfx.Stop();
+            if (_sfx != null) _sfx.volume = 0f;
         }
 
         /// <summary>降りで Sound Director の所を通過: 効果音を戻す。</summary>
-        public void ReviveSfx() => _sfxKilled = false;
+        public void ReviveSfx()
+        {
+            _sfxKilled = false;
+            if (_sfx != null) _sfx.volume = sfxVolume;
+        }
 
         /// <summary>設定スライダーの反映。</summary>
         public void ApplyVolumes()
         {
             if (_bgm != null && _xfadeCo == null) _bgm.volume = bgmVolume;
-            if (_sfx != null) _sfx.volume = sfxVolume;
+            if (_sfx != null && !_sfxKilled) _sfx.volume = sfxVolume;
         }
 
         // --- フォールバック用の手続き生成(Resources が無い場合) ------

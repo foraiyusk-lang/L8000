@@ -145,7 +145,7 @@ namespace L8000
                 if (destroyed <= 0) return "指が止まった。ここまでだった。";
                 return "動けなくなって、名前ごと沈んだ。";
             }
-            if (destroyed <= 0) return "だれも消さずに、下まで戻った。";
+            if (destroyed <= 0) return "";
             if (destroyed < 20) return "いくつかの名前は、もう戻らない。";
             if (destroyed < 80) return "多くの名前が、無くなった。";
             return "ほとんど、何も残らなかった。それでも、戻ってきた。";

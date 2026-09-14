@@ -138,6 +138,27 @@ namespace L8000
                 if (ch.topRight.y > maxY) maxY = ch.topRight.y;
             }
 
+            // --- 文字化け中は表示される文字の実測幅も測り、和集合を取る ---
+            // (プロポーショナルフォントなので文字化け後のグリフが元の単語より
+            //  はみ出す/引っ込むことがあり、見た目と当たり判定がズレて見えるのを防ぐ。
+            //  足場の基準は変わらず「元の単語」中心のまま、はみ出た分だけ広げる。)
+            if (bodyText != plain && !gone && !strike)
+            {
+                tmp.text = bodyText;
+                tmp.ForceMeshUpdate();
+                var ti2 = tmp.textInfo;
+                for (int i = 0; i < ti2.characterCount; i++)
+                {
+                    var ch = ti2.characterInfo[i];
+                    if (!ch.isVisible) continue;
+                    any = true;
+                    if (ch.bottomLeft.x < minX) minX = ch.bottomLeft.x;
+                    if (ch.topRight.x > maxX) maxX = ch.topRight.x;
+                    if (ch.bottomLeft.y < minY) minY = ch.bottomLeft.y;
+                    if (ch.topRight.y > maxY) maxY = ch.topRight.y;
+                }
+            }
+
             if (!any || gone || strike || noCollider)
             {
                 box.enabled = false;
