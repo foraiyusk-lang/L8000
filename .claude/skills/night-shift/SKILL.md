@@ -18,7 +18,7 @@ description: 「残り8000回」を無人で作り進めるための30分ごと�
 2. **評価(直前の実装へのフィードバック)**
    - 直近で実装した機能を Unity MCP で実際に Play して検証(`manage_editor play` → `execute_code` で状態確認 → `manage_camera screenshot` で目視)。
    - スクリーンショットは必ず自分の目で見て、視認性・世界観・不自然さを評価する。
-   - 問題があれば「何が」「なぜ」「どう直すか」を `NIGHT_SHIFT.md` に書き、修正する。
+   - 問題があれば「何が」「なぜ」「どう直すか」を `docs/archive/NIGHT_SHIFT_LOG.md` の末尾に書き、修正する。
 
 3. **次に必要なものの立案**
    - 残タスク(`NIGHT_SHIFT.md` の計画)から次の1〜2項目を選ぶ。
@@ -31,7 +31,7 @@ description: 「残り8000回」を無人で作り進めるための30分ごと�
    - `NIGHT_SHIFT.md` の進捗を更新。
 
 5. **記録**
-   - 今回やったこと・次回やること・詰まっている点を `NIGHT_SHIFT.md` に3〜5行で残す。
+   - 今回やったこと・次回やること・詰まっている点を `docs/archive/NIGHT_SHIFT_LOG.md` の末尾に3〜5行で残す(`NIGHT_SHIFT.md` には現在の進捗1行だけ反映)。
 
 ## トークン枯渇時
 
